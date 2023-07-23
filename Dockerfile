@@ -11,16 +11,16 @@ RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y chromium
 
 # Set the working directory to /app
-WORKDIR /app
+WORKDIR /usr/src/app
 
 # Bundle your app source inside the docker image
 COPY . .
 
 # Install all the dependencies
-RUN npm ci
+RUN npm install
 
 # Build the API
-RUN npm run build wusuaa-api # command to build an app in an NX monorepo; replace with your app build command
+RUN npm run build
 
 # Your app binds to port 8080 so you'll use the EXPOSE instruction to have it mapped by the docker daemon
 EXPOSE 8080
@@ -31,4 +31,4 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_ARGS='--no-sandbox'
 
 # Start command
-CMD [ "yarn", "start" ] # again replace this with your specific node command to start your app/service
+CMD [ "node", "dist/main.js" ] # again replace this with your specific node command to start your app/service

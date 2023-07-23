@@ -1,0 +1,14 @@
+name: wusuaa-nest
+region: nyc
+services:
+- dockerfile_path: Dockerfile
+  # this path is for an NX monorepo
+  github:
+    branch: development
+    deploy_on_push: true
+    repo: codeakblack12/wusuaa-api
+  http_port: 8080
+  instance_count: 2
+  instance_size_slug: professional-xs
+  name: projects
+  source_dir: /
