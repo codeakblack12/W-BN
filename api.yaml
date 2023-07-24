@@ -7,7 +7,7 @@ services:
     branch: development
     deploy_on_push: true
     repo: codeakblack12/wusuaa-api
-  http_port: 8080
+  http_port: 3000
   instance_count: 2
   instance_size_slug: professional-xs
   name: projects
