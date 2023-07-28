@@ -170,25 +170,26 @@ export class SalesController {
 
 
     // Generate Warehouse Receipt
-    // @UseGuards(SalesGuard)
+    @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
     @Get('generate-warehouse-receipt/:_id')
     async generateWareReceipt(@Request() req, @Param() params: ObjectIdDto){
         try {
             const file = await this.service.generateWareReceipt(params._id)
-            return new StreamableFile(file)
+            // return new StreamableFile(file)
+            return file
         } catch (error) {
             throw new BadRequestException(error)
         }
     }
 
     // Generate Dockyard Receipt
-    // @UseGuards(SalesGuard)
+    @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
     @Get('generate-dockyard-receipt/:_id')
     async generateDockReceipt(@Request() req, @Param() params: ObjectIdDto){
         const file = await this.service.generateDockReceipt(params._id)
-        return new StreamableFile(file)
+        return file
     }
 
 }

@@ -977,7 +977,9 @@ export class SalesService {
 
         const output = await generatePdf(file, options)
 
-        return output
+        const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+
+        return base64_output
 
     }
 }
