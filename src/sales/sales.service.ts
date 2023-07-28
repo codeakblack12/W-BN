@@ -13,6 +13,8 @@ import fs from 'fs';
 import { promisify } from 'util';
 import { generatePdf } from "html-pdf-node"
 import { receiptBody, receiptHeader } from 'src/components/common/functions/templates';
+import * as JsBarcode from 'jsbarcode';
+import { Canvas, createCanvas } from 'canvas';
 
 const axios = require('axios').default;
 
@@ -913,28 +915,69 @@ export class SalesService {
 
     }
 
-    async generateReceipt(id: ObjectId){
-        try {
-            const carts = await this.cartModel.findById(id)
+    async generateWareReceipt(id: ObjectId){
+        const carts = await this.cartModel.findById(id)
 
-            const summary = await this.getCheckoutSummary(carts.uid)
-            const handler = await this.userModel.findOne({_id: carts.handler})
-
-            let options = { format: 'A5' };
-
-            let file = await { content: `
-                <html lang="en">
-                    ${receiptHeader()}
-                    ${receiptBody(summary.data, handler, carts, "Warehouse")}
-                </html>
-            `};
-
-            const output = await generatePdf(file, options)
-
-            return output
-        } catch (error) {
-            throw new BadRequestException(error);
+        if(!carts){
+            throw new BadRequestException("Cart does not exist");
         }
+
+        const summary = await this.getCheckoutSummary(carts.uid)
+        const handler = await this.userModel.findOne({_id: carts.handler})
+
+        let options = { format: 'A5' };
+
+        var barcode__ = new Canvas(500, 400, "image");
+
+        await JsBarcode(barcode__, carts.uid, {
+            width: 2, height: 100, text: carts.uid
+        })
+
+        const barcode = barcode__?.toDataURL()
+
+        let file = await { content: `
+            <html lang="en">
+                ${receiptHeader()}
+                ${receiptBody(summary.data, handler, carts, "Warehouse", barcode)}
+            </html>
+        `};
+
+        const output = await generatePdf(file, options)
+
+        return output
+
+    }
+
+    async generateDockReceipt(id: ObjectId){
+        const carts = await this.dockyardcartModel.findById(id)
+
+        if(!carts){
+            throw new BadRequestException("Cart does not exist");
+        }
+
+        const summary = await this.getDockyardCheckoutSummary(carts.uid)
+        const handler = await this.userModel.findOne({_id: carts.handler})
+
+        let options = { format: 'A5' };
+
+        var barcode__ = new Canvas(500, 400, "image");
+
+        await JsBarcode(barcode__, carts.uid, {
+            width: 2, height: 100, text: carts.uid
+        })
+
+        const barcode = barcode__?.toDataURL()
+
+        let file = await { content: `
+            <html lang="en">
+                ${receiptHeader()}
+                ${receiptBody(summary.data, handler, carts, "Dockyard", barcode)}
+            </html>
+        `};
+
+        const output = await generatePdf(file, options)
+
+        return output
 
     }
 }
