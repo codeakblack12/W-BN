@@ -963,7 +963,7 @@ export class SalesService {
         var barcode__ = new Canvas(500, 400, "image");
 
         await JsBarcode(barcode__, carts.uid, {
-            width: 2, height: 100, text: carts.uid
+            width: 2, height: 100, text: ""
         })
 
         const barcode = barcode__?.toDataURL()
