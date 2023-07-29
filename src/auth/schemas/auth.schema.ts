@@ -71,6 +71,9 @@ export class Warehouse {
 
     @Prop()
     identifier: string;
+
+    @Prop()
+    active: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User)

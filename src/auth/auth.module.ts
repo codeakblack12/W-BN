@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema, WarehouseSchema } from './schemas/auth.schema';
 import { ConfigModule } from '@nestjs/config';
 import { CountrySchema } from 'src/admin/schemas/admin.schema';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CountrySchema } from 'src/admin/schemas/admin.schema';
       isGlobal: true,
     }),
     AuthModule,
+    MailModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
     MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
     MongooseModule.forFeature([{name: 'Country', schema: CountrySchema}]),

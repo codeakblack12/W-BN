@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { LoginUserDto, RegisterUserDto, CreateWarehouseDto  } from './dto/post.dto';
 import { JwtService } from '@nestjs/jwt'
@@ -10,6 +10,8 @@ import { Role, User, Warehouse } from './schemas/auth.schema';
 import * as mongoose from 'mongoose';
 import { jwtConstants } from './constants';
 import { Country } from 'src/admin/schemas/admin.schema';
+import { MailService } from 'src/mail/mail.service';
+
 
 @Injectable()
 export class AuthService {
@@ -21,8 +23,10 @@ export class AuthService {
         private warehouseModel: mongoose.Model<Warehouse>,
         @InjectModel(Country.name)
         private countryModel: mongoose.Model<Country>,
-        private jwtService: JwtService
+        private mailService: MailService,
+        private jwtService: JwtService,
     ) {}
+
 
     async getAll(): Promise<User[]> {
         const users = await this.userModel.find()
@@ -60,7 +64,8 @@ export class AuthService {
 
         const res = await this.warehouseModel.create({
             ...payload,
-            currency: countryExists.currency
+            currency: countryExists.currency,
+            active: true
         })
 
         return {
@@ -116,6 +121,8 @@ export class AuthService {
             active: false,
             disabled: false
         })
+
+        await this.mailService.sendWelcomeEmail(payload.email, generatedPassword)
 
         return {
             message: "Successful"
