@@ -39,6 +39,9 @@ export class Inventory {
     @Prop()
     warehouse: string;
 
+    @Prop()
+    inStock: string;
+
 }
 
 export class AddToInventory {

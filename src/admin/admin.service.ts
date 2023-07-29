@@ -105,12 +105,10 @@ export class AdminService {
         location: string, warehouse: string
     ){
         const query = {
-            reference: { $regex: ref || "" },
-            status: { $regex: status || "" },
-            cart: {
-                sale_location: {$regex: location || ""},
-                warehouse: {$regex: warehouse || ""}
-            },
+            "reference": { $regex: ref || "" },
+            "status": { $regex: status || "" },
+            "cart.sale_location": {$regex: location || ""},
+            "cart.warehouse": {$regex: warehouse || ""},
         }
         const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).limit(limit || 10).skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
         const total_transactions = await this.transactionModel.find(query).count()

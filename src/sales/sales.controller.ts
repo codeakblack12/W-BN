@@ -112,13 +112,9 @@ export class SalesController {
     @UsePipes(new ValidationPipe({ transform: true }))
     @Post('cart/checkout')
     async checkoutCart(@Request() req, @Body(new ValidationPipe()) payload: CheckoutDockyardCartDto){
-        try {
-            const resp = await this.service.checkoutCart(req.user, payload)
-            this.salesGateway.server.emit(`CHECKOUT-${resp.data.uid}`, resp.data);
-            return resp
-        } catch (error) {
-            throw new BadRequestException(error)
-        }
+        const resp = await this.service.checkoutCart(req.user, payload)
+        this.salesGateway.server.emit(`CHECKOUT-${resp.data.uid}`, resp.data);
+        return resp
     }
 
 

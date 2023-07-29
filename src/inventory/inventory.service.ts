@@ -93,7 +93,8 @@ export class InventoryService {
                 code: item_arr[0],
                 ref: item_arr[1],
                 category: categories.name,
-                warehouse: user.warehouse[0]
+                warehouse: user.warehouse[0],
+                inStock: true
             })
 
             return res

@@ -104,6 +104,10 @@ export class SalesService {
             console.log("Item does not exist")
             throw new WsException("Item does not exist");
         }
+        if(!items.inStock){
+            console.log("Item not in stock")
+            throw new WsException("Item not in stock");
+        }
 
         // Get Item Price
         const categoryInfo = await this.categoryModel.findOne({name: items.category})
@@ -317,6 +321,7 @@ export class SalesService {
             throw new BadRequestException("Cart does not exist");
         }
 
+        await this.removeFromStock(id)
         await this.cartModel.updateOne(
             {_id: id},
             {$set: {confirmed: true, payment_type: payment_type}}
@@ -901,6 +906,7 @@ export class SalesService {
         )
 
         if(cart.sale_location === "WAREHOUSE"){
+            await this.removeFromStock(cart.id)
             await this.cartModel.updateOne(
                 {_id: cart.id},
                 {$set: {confirmed: true, payment_type: "ONLINE"}}
@@ -917,6 +923,17 @@ export class SalesService {
             status: "SUCCESSFUL"
         }
 
+    }
+
+    async removeFromStock(id: any){
+        const carts = await this.cartModel.findById(id)
+        const items = carts.items.map((val) => {
+            return val.uid
+        })
+        await this.inventoryModel.updateMany(
+            {uid: {$in: items}},
+            {$set: {inStock: false}}
+        )
     }
 
     async generateWareReceipt(id: ObjectId){
