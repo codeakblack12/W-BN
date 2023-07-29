@@ -1,9 +1,9 @@
-import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateCartDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto } from './dto/post.dto';
+import { AddCurrencyDto, GetTransactionDto } from './dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -34,6 +34,19 @@ export class AdminController {
     async getCountries(){
         try {
             return this.service.getCountries()
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Get('transactions')
+    async getTransactions(@Query() query: GetTransactionDto){
+        try {
+            return this.service.getTransactions(
+                query.page, query.limit, query.ref, query.status,
+                query.location, query.warehouse
+            )
         } catch (error) {
             throw new BadRequestException();
         }

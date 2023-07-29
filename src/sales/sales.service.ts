@@ -290,7 +290,8 @@ export class SalesService {
             cart: {
                 id: carts._id,
                 uid: carts.uid,
-                sale_location: "DOCKYARD"
+                sale_location: "DOCKYARD",
+                warehouse: carts.warehouse
             }
         }
 
@@ -336,7 +337,8 @@ export class SalesService {
             cart: {
                 id: carts._id,
                 uid: carts.uid,
-                sale_location: "WAREHOUSE"
+                sale_location: "WAREHOUSE",
+                warehouse: carts.warehouse
             }
         }
 
@@ -747,7 +749,8 @@ export class SalesService {
             cart: {
                 id: cart._id,
                 uid: cart.uid,
-                sale_location: location
+                sale_location: location,
+                warehouse: cart.warehouse
             }
         }
 
@@ -847,7 +850,8 @@ export class SalesService {
             cart: {
                 id: cart._id,
                 uid: cart.uid,
-                sale_location: location
+                sale_location: location,
+                warehouse: cart.warehouse
             }
         }
 

@@ -52,6 +52,9 @@ export class TransactionCart {
     @Prop()
     sale_location: SALE_LOCATIONS;
 
+    @Prop()
+    warehouse: string;
+
 }
 
 @Schema({

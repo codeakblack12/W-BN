@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/auth/schemas/auth.schema';
-import { Cart } from 'src/sales/schemas/sales.schema';
+import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AddCurrencyDto } from './dto/post.dto';
@@ -22,6 +22,8 @@ export class AdminService {
         private categoryModel: mongoose.Model<Category>,
         @InjectModel(Country.name)
         private countryModel: mongoose.Model<Country>,
+        @InjectModel(Transaction.name)
+        private transactionModel: mongoose.Model<Transaction>,
 
     ){}
 
@@ -60,8 +62,6 @@ export class AdminService {
 
     }
 
-
-
     async createCategory(payload: CreateCategoryDto){
         const { name, price } = payload
         const categories = await this.categoryModel.findOne({name: name.toLocaleLowerCase()})
@@ -97,6 +97,29 @@ export class AdminService {
 
         return {
             message: "Successful"
+        }
+    }
+
+    async getTransactions(
+        page: number, limit: number, ref: string, status: string,
+        location: string, warehouse: string
+    ){
+        const query = {
+            reference: { $regex: ref || "" },
+            status: { $regex: status || "" },
+            cart: {
+                sale_location: {$regex: location || ""},
+                warehouse: {$regex: warehouse || ""}
+            },
+        }
+        const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).limit(limit || 10).skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        const total_transactions = await this.transactionModel.find(query).count()
+        const number_of_pages = Math.ceil(total_transactions / Number(limit))
+        return {
+            data: transactions,
+            total: total_transactions,
+            pages: number_of_pages,
+            next: Number(page) + 1 > number_of_pages ? "" : Number(page) + 1
         }
     }
 }
