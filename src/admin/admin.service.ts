@@ -5,7 +5,7 @@ import { User } from 'src/auth/schemas/auth.schema';
 import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GetTransactionDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetTransactionDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 
@@ -63,7 +63,7 @@ export class AdminService {
     }
 
     async createCategory(payload: CreateCategoryDto){
-        const { name, price } = payload
+        const { name, price, stockThreshold } = payload
         const categories = await this.categoryModel.findOne({name: name.toLocaleLowerCase()})
 
         let duplicates = []
@@ -92,7 +92,8 @@ export class AdminService {
         const res = await this.categoryModel.create({
             name: name.toLocaleLowerCase(),
             code: category_code,
-            price
+            price,
+            stockThreshold
         })
 
         return {
@@ -104,43 +105,102 @@ export class AdminService {
         page: number, limit: number, ref: string, status: string,
         location: string, warehouse: string
     ){
+        const page_ = page || 1
+        const limit_ = limit || 10
+
         const query = {
             "reference": { $regex: ref || "" },
             "status": { $regex: status || "" },
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
         }
-        const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).limit(limit || 10).skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).skip(Number(page_) > 0 ? (Number(page_) - 1) * Number(limit_) : 0).limit(limit_)
         const total_transactions = await this.transactionModel.find(query).count()
-        const number_of_pages = Math.ceil(total_transactions / Number(limit))
+        const number_of_pages = Math.ceil(total_transactions / Number(limit_))
         return {
             data: transactions,
             total: total_transactions,
             pages: number_of_pages,
-            next: Number(page) + 1 > number_of_pages ? "" : Number(page) + 1
+            next: Number(page) + 1 > number_of_pages ? "" : Number(page_) + 1
         }
     }
 
-    async getInventory(query: GetTransactionDto){
+    async getInventory(query: GetInventoryDto){
 
-        const inventory = await this.categoryModel
-        // .find({},{price: 0})
-        // .sort( { "updatedAt": -1 } )
-        // .limit(query.limit || 10).skip(Number(query.page) > 0 ? (Number(query.page) - 1) * Number(query.limit) : 0)
-        .aggregate([{
-            $lookup: {
-                from: "inventories",
-                localField: "name",
-                foreignField: "category",
-                pipeline: [
-                    {   $match: {inStock: true}}
-                ],
-                as: "items"
-            }
-        }])
+        const page = Number(query.page) || 1
+        const limit = Number(query.limit) || 10
+        const warehouse = query.warehouse || ""
+
+        const aggregate = [
+            // {$sort: { "name": 1 }},
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "name",
+                    foreignField: "category",
+                    pipeline: [
+                        {   $match: {inStock: true, warehouse: {$regex: warehouse}}}
+                    ],
+                    as: "items"
+                },
+            },
+            { $addFields: {
+                stock: {$size: "$items"},
+            }},
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    code: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    stock: 1,
+                    status: 1,
+                    stockThreshold: 1
+                }
+            },
+        ]
+
+        const inventory = await this.categoryModel.aggregate(aggregate)
+        .sort({ name: 1 })
+        .skip(page > 0 ? (page - 1) * limit : 0)
+        .limit(limit)
+
+        const total_categories = await this.categoryModel.find().count()
+        const number_of_pages = Math.ceil(total_categories / limit)
 
         return {
-            data: inventory
+            data: inventory,
+            total: total_categories,
+            pages: number_of_pages,
+            next: page + 1 > number_of_pages ? "" : page + 1
+        }
+    }
+
+    async getInventoryByCategory(category: string, query: GetInventoryDto){
+        const page = Number(query.page) || 1
+        const limit = Number(query.limit) || 10
+        const warehouse = query.warehouse || ""
+
+        const find_query = {
+            category: category,
+            warehouse: warehouse,
+            inStock: true
+        }
+
+        const inventory = await this.inventoryModel.find(find_query)
+        .sort( { "updatedAt": -1 } )
+        .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        .limit(limit)
+
+        const total_inventory = await this.inventoryModel.find(find_query).count()
+        const number_of_pages = Math.ceil(total_inventory / Number(limit))
+
+        return {
+            data: inventory,
+            total: total_inventory,
+            pages: number_of_pages,
+            next: page + 1 > number_of_pages ? "" : Number(page) + 1
         }
     }
 }

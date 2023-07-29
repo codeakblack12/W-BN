@@ -16,6 +16,9 @@ export class Category {
     @Prop()
     price: Price[]
 
+    @Prop()
+    stockThreshold: number
+
 }
 
 @Schema({

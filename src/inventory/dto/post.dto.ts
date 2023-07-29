@@ -33,4 +33,10 @@ export class CreateCategoryDto {
     @Type(() => Price)
     price: Price[]
 
+    @ApiProperty()
+    @Prop()
+    @IsNotEmpty()
+    @Min(1)
+    stockThreshold: number
+
 }

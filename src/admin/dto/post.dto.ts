@@ -39,3 +39,16 @@ export class GetTransactionDto {
 
 
 }
+
+
+export class GetInventoryDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
+
+    @ApiProperty()
+    warehouse: string;
+
+}
