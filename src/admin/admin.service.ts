@@ -5,7 +5,7 @@ import { User } from 'src/auth/schemas/auth.schema';
 import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto } from './dto/post.dto';
+import { AddCurrencyDto, GetTransactionDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 
@@ -118,6 +118,29 @@ export class AdminService {
             total: total_transactions,
             pages: number_of_pages,
             next: Number(page) + 1 > number_of_pages ? "" : Number(page) + 1
+        }
+    }
+
+    async getInventory(query: GetTransactionDto){
+
+        const inventory = await this.categoryModel
+        // .find({},{price: 0})
+        // .sort( { "updatedAt": -1 } )
+        // .limit(query.limit || 10).skip(Number(query.page) > 0 ? (Number(query.page) - 1) * Number(query.limit) : 0)
+        .aggregate([{
+            $lookup: {
+                from: "inventories",
+                localField: "name",
+                foreignField: "category",
+                pipeline: [
+                    {   $match: {inStock: true}}
+                ],
+                as: "items"
+            }
+        }])
+
+        return {
+            data: inventory
         }
     }
 }

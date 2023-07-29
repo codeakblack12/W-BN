@@ -40,7 +40,7 @@ export class Inventory {
     warehouse: string;
 
     @Prop()
-    inStock: string;
+    inStock: boolean;
 
 }
 
