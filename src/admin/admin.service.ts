@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from 'src/auth/schemas/auth.schema';
+import { Role, User } from 'src/auth/schemas/auth.schema';
 import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GetInventoryDto, GetTransactionDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetTransactionDto, GetUsersDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 
@@ -199,6 +199,67 @@ export class AdminService {
         return {
             data: inventory,
             total: total_inventory,
+            pages: number_of_pages,
+            next: page + 1 > number_of_pages ? "" : Number(page) + 1
+        }
+    }
+
+    getRoleString (role: Array<Role>) {
+        const RoleString = {
+            'SUPER_ADMIN': 'Super Admin',
+            'ADMIN': 'Admin',
+            'MANAGER': 'Manager',
+            'INVENTORY': 'Inventory Manager',
+            'SALES': 'Sales',
+            'SECURITY': 'Securty'
+        }
+
+        let string = ""
+        role.map((val, index) => {
+            if(index === 0){
+                string = RoleString[val]
+            }else{
+                string = string + `, ${RoleString[val]}`
+            }
+        })
+
+        return string
+    }
+    async getUsers(query: GetUsersDto){
+        const page = Number(query.page) || 1
+        const limit = Number(query.limit) || 10
+        const warehouse = query.warehouse
+
+        let find_query
+
+        find_query = warehouse ? { warehouse: warehouse } : {}
+
+        const users = await this.userModel.find(find_query, {password: 0})
+        .sort( { "name": 1 } )
+        .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        .limit(limit)
+
+        const total_users = await this.userModel.find(find_query).count()
+        const number_of_pages = Math.ceil(total_users / Number(limit))
+
+        const processed = await users.map((user) => {
+            const role_string = this.getRoleString(user.role)
+
+            const proc = {
+                ...user.toJSON(),
+                status: user.disabled ? "Disabled" : (user.active ? "Active" : "Pending"),
+                role: role_string
+            }
+            delete proc.disabled
+            delete proc.active
+            // delete proc.role
+
+            return proc
+        })
+
+        return {
+            data: processed,
+            total: total_users,
             pages: number_of_pages,
             next: page + 1 > number_of_pages ? "" : Number(page) + 1
         }

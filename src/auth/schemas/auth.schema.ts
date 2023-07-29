@@ -41,6 +41,12 @@ export class User {
 
     @Prop()
     warehouse: string[];
+
+    @Prop()
+    active: boolean;
+
+    @Prop()
+    disabled: boolean;
 }
 
 @Schema({

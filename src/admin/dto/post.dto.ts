@@ -52,3 +52,16 @@ export class GetInventoryDto {
     warehouse: string;
 
 }
+
+
+export class GetUsersDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
+
+    @ApiProperty()
+    warehouse: string;
+
+}

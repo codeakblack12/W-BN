@@ -112,7 +112,9 @@ export class AuthService {
 
         const res = await this.userModel.create({
             ...payload,
-            password: payload.email === "igbinedionpaul@gmail.com" ? dummy_password : hashed_password
+            password: payload.email === "igbinedionpaul@gmail.com" ? dummy_password : hashed_password,
+            active: false,
+            disabled: false
         })
 
         return {
@@ -122,7 +124,7 @@ export class AuthService {
 
     async loginUser(payload: LoginUserDto){
         // Check if user exists
-        const user = await this.userModel.findOne({email: payload.email})
+        const user = await this.userModel.findOne({email: payload.email, disabled: false})
         if(!user){
             throw new UnauthorizedException("User does not exist");
         }
@@ -135,10 +137,24 @@ export class AuthService {
 
         user.password = undefined
 
-        const user_ = user.toJSON()
+        let user_ = user.toJSON()
+
+        if(!user.active){
+            await this.userModel.findOneAndUpdate(
+                { 'email': payload.email },
+                {'$set': {
+                    active: true
+                }}
+            )
+        }
+
+        const token = {
+            ...user_,
+            platform: payload.platform
+        }
 
         return {
-            access_token: await this.jwtService.signAsync(user_)
+            access_token: await this.jwtService.signAsync(token)
         }
     }
 
