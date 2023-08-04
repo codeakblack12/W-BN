@@ -155,8 +155,17 @@ export class AdminService {
                     createdAt: 1,
                     updatedAt: 1,
                     stock: 1,
-                    status: 1,
-                    stockThreshold: 1
+                    stockThreshold: 1,
+                    price: 1,
+                    status: {
+                        $switch: {
+                            "branches": [
+                                { "case": { "$gt": [ "$stock", "$stockThreshold" ] }, "then": "In Stock" },
+                                { "case": { "$eq": [ "$stock", 0 ] }, "then": "Out of Stock" }
+                            ],
+                            "default": "Low in Stock"
+                        }
+                    }
                 }
             },
         ]

@@ -186,7 +186,7 @@ export class SalesService {
             uid: item,
             category: category,
             scanned_by: user._id,
-            price: categoryPrice[0].value,
+            price: categoryPrice[0].dockyard_value,
             currency: categoryPrice[0].currency
         }
 

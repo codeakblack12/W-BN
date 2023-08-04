@@ -18,6 +18,11 @@ export class Price {
     @IsNotEmpty()
     @Min(1)
     value: number
+
+    @Prop()
+    @IsNotEmpty()
+    @Min(1)
+    dockyard_value: number
 }
 
 export class CreateCategoryDto {
