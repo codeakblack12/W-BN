@@ -65,3 +65,29 @@ export class GetUsersDto {
     warehouse: string;
 
 }
+
+export class GetTransactionOverviewDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    from: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    to: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
+
+    // @ApiProperty()
+    // @IsNotEmpty()
+    // @IsEnum(Currency, { message: "Invalid Currency" })
+    // currency: Currency;
+}
+
+
+export class GetStatisticsDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
+}

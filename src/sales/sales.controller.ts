@@ -158,6 +158,7 @@ export class SalesController {
         try {
             const resp = await this.service.paystackWebhook(payload)
             this.salesGateway.server.emit(resp.reference, resp.status);
+            this.salesGateway.server.emit(`CHECKOUT-${resp.data.uid}`, resp.data);
             return resp
         } catch (error) {
             throw new BadRequestException(error)

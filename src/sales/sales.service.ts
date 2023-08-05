@@ -918,9 +918,12 @@ export class SalesService {
             )
         }
 
+        const summary = await this.getCheckoutSummary(cart.uid)
+
         return {
             reference: data.reference,
-            status: "SUCCESSFUL"
+            status: "SUCCESSFUL",
+            data: summary.data
         }
 
     }

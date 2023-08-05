@@ -44,6 +44,7 @@
     "intl": "^1.2.5",
     "js-sha512": "^0.8.0",
     "jsbarcode": "^3.11.5",
+    "moment": "^2.29.4",
     "mongoose": "^7.4.0",
     "nanoid": "3",
     "nodemailer": "^6.9.4",

@@ -1,9 +1,9 @@
-import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateCartDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GetInventoryDto, GetTransactionDto, GetUsersDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto } from './dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -77,6 +77,40 @@ export class AdminController {
     async getUsers(@Query() query: GetUsersDto){
         try {
             return this.service.getUsers(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('statistics')
+    async getStatistics(@Query(new ValidationPipe()) query: GetStatisticsDto){
+        try {
+            return this.service.getStatistics(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('transaction-overview')
+    async getTransactionOverview(@Query(new ValidationPipe()) query: GetTransactionOverviewDto){
+        try {
+            return this.service.getTransactionOverview(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('inventory-overview')
+    async getInventoryOverview(@Query(new ValidationPipe()) query: GetStatisticsDto){
+        try {
+            return this.service.getInventoryOverview(query)
         } catch (error) {
             throw new BadRequestException();
         }
