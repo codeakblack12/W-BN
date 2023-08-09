@@ -549,7 +549,8 @@ export class SalesService {
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
                 currency: cart_items[0]?.currency || 'N/A',
-                items: items
+                items: items,
+                payment_type: cart.payment_type
             }
         }
 
@@ -599,7 +600,8 @@ export class SalesService {
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
                 currency: cart_items[0]?.currency || 'N/A',
-                items: items
+                items: items,
+                payment_type: cart.payment_type
             }
         }
 
