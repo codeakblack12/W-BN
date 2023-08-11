@@ -113,11 +113,10 @@ export class AuthService {
         const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz012345789')
         const generatedPassword = nanoid(15);
         const hashed_password = await hasher(generatedPassword)
-        const dummy_password = await hasher("password123?")
 
         const res = await this.userModel.create({
             ...payload,
-            password: payload.email === "igbinedionpaul@gmail.com" ? dummy_password : hashed_password,
+            password: hashed_password,
             active: false,
             disabled: false
         })
