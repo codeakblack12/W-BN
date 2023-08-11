@@ -15,9 +15,9 @@ export class SalesController {
 
     // Get Carts in Warehouse for Mobile
     @UseGuards(SalesGuard)
-    @Get('carts')
-    async getCarts(@Request() req){
-        return this.service.getCarts(req.user)
+    @Get('carts/:warehouse')
+    async getCarts(@Request() req, @Param('warehouse') warehouse: string){
+        return this.service.getCarts(req.user, warehouse)
     }
 
     @UseGuards(SalesGuard)
@@ -28,16 +28,16 @@ export class SalesController {
 
     // Get Carts in Warehouse for Mobile
     @UseGuards(SalesGuard)
-    @Get('warehouse-carts')
-    async getWarehouseCarts(@Request() req){
-        return this.service.getCarts(req.user)
+    @Get('warehouse-carts/:warehouse')
+    async getWarehouseCarts(@Request() req, @Param('warehouse') warehouse: string){
+        return this.service.getCarts(req.user, warehouse)
     }
 
     // Get Carts in Warehouse for Desktop
     @UseGuards(SalesGuard)
-    @Get('handler-carts')
-    async getHandlerCarts(@Request() req){
-        return this.service.getHandlerCarts(req.user)
+    @Get('handler-carts/:warehouse')
+    async getHandlerCarts(@Request() req, @Param('warehouse') warehouse: string){
+        return this.service.getHandlerCarts(req.user, warehouse)
     }
 
     // Get Cart

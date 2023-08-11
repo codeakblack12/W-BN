@@ -158,6 +158,9 @@ export class CreateCart {
     @Prop()
     counter: number;
 
+    @Prop()
+    warehouse: string;
+
 }
 
 export class CreateDockyardCart {}

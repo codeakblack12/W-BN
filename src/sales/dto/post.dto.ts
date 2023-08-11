@@ -19,6 +19,9 @@ export class CreateCartDto {
     @Min(1)
     counter: number
 
+    @ApiProperty()
+    warehouse: string
+
 }
 
 export class CreateDockyardCartDto {}

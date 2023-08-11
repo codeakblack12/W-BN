@@ -39,10 +39,17 @@ export class SalesService {
     ){}
 
     async createCart(user: User, payload: CreateCartDto){
-        const { counter } = payload
+        const { counter, warehouse } = payload
 
         const nanoid = customAlphabet(process.env.ALPHA_CAPS)
         const generatedCardId = nanoid(8)
+
+        // Check Warehouse Exists
+        const warehouseExists = await this.warehouseModel.findOne({identifier: warehouse})
+        if(!warehouseExists){
+            console.log("Warehouse does not exist.")
+            throw new WsException("Warehouse does not exist.");
+        }
 
         // Check Handler Exists
         const handlerExists = await this.userModel.findOne({_id: user._id})
@@ -55,7 +62,7 @@ export class SalesService {
         const res = await this.cartModel.create({
             uid: generatedCardId,
             handler: user._id,
-            warehouse: user.warehouse[0],
+            warehouse: warehouse,
             confirmed: false,
             counter,
             items: []
@@ -356,12 +363,13 @@ export class SalesService {
 
     }
 
-    async getCarts(user: User){
+    async getCarts(user: User, warehouse: string){
 
         const warehouse_ = user?.warehouse
 
         const carts = await this.cartModel.find({
-            warehouse: {$in: warehouse_},
+            // warehouse: {$in: warehouse_},
+            warehouse: warehouse,
             confirmed: false
         })
 
@@ -626,13 +634,14 @@ export class SalesService {
 
     }
 
-    async getHandlerCarts(user: User){
+    async getHandlerCarts(user: User, warehouse: string){
 
         const warehouse_ = user?.warehouse
 
         const carts = await this.cartModel.find({
             handler: user._id,
-            confirmed: false
+            confirmed: false,
+            warehouse: warehouse
         })
 
         return {
