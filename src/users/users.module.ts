@@ -4,7 +4,7 @@ import { UsersService } from './users.service';
 import { jwtConstants } from 'src/auth/constants';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UserSchema } from 'src/auth/schemas/auth.schema';
+import { UserSchema, WarehouseSchema } from 'src/auth/schemas/auth.schema';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -15,6 +15,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     UsersModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
+    MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
