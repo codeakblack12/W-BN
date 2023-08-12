@@ -478,7 +478,29 @@ export class AdminService {
         const page = Number(query.page) || 1
         const limit = Number(query.limit) || 10
 
-        const warehouses = await this.warehouseModel.find({})
+        const aggregate = [
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                inStock: true,
+                            }
+                        }
+                    ],
+                    as: "items"
+                },
+            },
+            { $addFields: {
+                stock: {$size: "$items"},
+            }},
+            { $unset: "items" }
+
+        ]
+
+        const warehouses = await this.warehouseModel.aggregate(aggregate)
         .sort({ "createdAt": 1})
         .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
         .limit(limit)
@@ -488,7 +510,7 @@ export class AdminService {
 
         const processed = await warehouses.map((warehouse) => {
             const proc = {
-                ...warehouse.toJSON(),
+                ...warehouse,
                 status: warehouse.active ? "Active" : "Inactive"
             }
             delete proc.active
