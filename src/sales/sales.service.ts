@@ -88,7 +88,7 @@ export class SalesService {
         const res = await this.dockyardcartModel.create({
             uid: `DOCK-${generatedCardId}`,
             handler: user._id,
-            warehouse: user.warehouse[0],
+            warehouse: payload.warehouse,
             confirmed: false,
             items: []
         })

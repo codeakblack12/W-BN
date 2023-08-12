@@ -78,9 +78,9 @@ export class SalesController {
 
     // Get Dockyard Carts
     @UseGuards(SalesGuard)
-    @Get('dockyard-carts')
-    async getDockyardCarts(@Request() req){
-        return this.service.getDockyardCarts(req.user)
+    @Get('dockyard-carts/:warehouse')
+    async getDockyardCarts(@Request() req, @Param('warehouse') warehouse: string){
+        return this.service.getDockyardCarts(req.user, warehouse)
     }
 
     // Get Dockyard Cart

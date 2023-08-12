@@ -24,7 +24,10 @@ export class CreateCartDto {
 
 }
 
-export class CreateDockyardCartDto {}
+export class CreateDockyardCartDto {
+    @ApiProperty()
+    warehouse: string
+}
 
 export class AddToCartDto {
     @ApiProperty()
