@@ -51,6 +51,12 @@ export class GetInventoryDto {
     @ApiProperty()
     warehouse: string;
 
+    @ApiProperty()
+    name: string;
+
+    @ApiProperty()
+    status: string;
+
 }
 
 export class GetWarehouseDto {

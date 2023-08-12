@@ -134,6 +134,8 @@ export class AdminService {
         const page = Number(query.page) || 1
         const limit = Number(query.limit) || 10
         const warehouse = query.warehouse || ""
+        const name = query.name || ""
+        const status = query.status || ""
 
         const aggregate = [
             // {$sort: { "name": 1 }},
@@ -143,7 +145,11 @@ export class AdminService {
                     localField: "name",
                     foreignField: "category",
                     pipeline: [
-                        {   $match: {inStock: true, warehouse: {$regex: warehouse}}}
+                        {   $match: {
+                                inStock: true,
+                                warehouse: {$regex: warehouse},
+                            }
+                        }
                     ],
                     as: "items"
                 },
@@ -170,6 +176,12 @@ export class AdminService {
                             "default": "Low in Stock"
                         }
                     }
+                }
+            },
+            {
+                $match: {
+                    name: {$regex: name},
+                    status: {$regex: status}
                 }
             },
         ]

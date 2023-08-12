@@ -54,7 +54,7 @@ export class AdminController {
 
     @UseGuards(AdminGuard)
     @Get('inventory')
-    async getInventory(@Query() query: GetTransactionDto){
+    async getInventory(@Query() query: GetInventoryDto){
         try {
             return this.service.getInventory(query)
         } catch (error) {
