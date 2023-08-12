@@ -66,6 +66,12 @@ export class GetWarehouseDto {
     @ApiProperty()
     page: number;
 
+    @ApiProperty()
+    name: string;
+
+    @ApiProperty()
+    status: string;
+
 }
 
 

@@ -477,6 +477,8 @@ export class AdminService {
     async getWarehouses(query: GetWarehouseDto){
         const page = Number(query.page) || 1
         const limit = Number(query.limit) || 10
+        const name = query.name || ""
+        const status = query.status || ""
 
         const aggregate = [
             {
@@ -495,8 +497,17 @@ export class AdminService {
             },
             { $addFields: {
                 stock: {$size: "$items"},
+                status: {
+                    $cond: [ { $eq: [ "$active", true ] }, "Active", "Inactive" ]
+                }
             }},
-            { $unset: "items" }
+            { $unset: "items" },
+            {
+                $match: {
+                    identifier: {$regex: name},
+                    status: {$regex: status}
+                }
+            },
 
         ]
 
@@ -508,17 +519,8 @@ export class AdminService {
         const total_warehouses = await this.warehouseModel.find({}).count()
         const number_of_pages = Math.ceil(total_warehouses / Number(limit))
 
-        const processed = await warehouses.map((warehouse) => {
-            const proc = {
-                ...warehouse,
-                status: warehouse.active ? "Active" : "Inactive"
-            }
-            delete proc.active
-            return proc
-        })
-
         return {
-            data: processed,
+            data: warehouses,
             total: total_warehouses,
             pages: number_of_pages,
             next: page + 1 > number_of_pages ? "" : Number(page) + 1
