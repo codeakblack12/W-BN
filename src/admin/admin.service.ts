@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ObjectId, Types } from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
@@ -526,5 +526,22 @@ export class AdminService {
             next: page + 1 > number_of_pages ? "" : Number(page) + 1
         }
 
+    }
+
+    async toggleWarehouse(warehouse: ObjectId, status: boolean){
+        const ware_ = await this.warehouseModel.findById(warehouse)
+        if(!ware_){
+            throw new BadRequestException("Warehouse does not exists");
+        }
+        await this.warehouseModel.findOneAndUpdate(
+            { '_id': warehouse },
+            {'$set': {
+                active: status
+            }}
+        )
+
+        return {
+            message: "Successful"
+        }
     }
 }

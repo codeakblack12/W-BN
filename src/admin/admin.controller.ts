@@ -1,9 +1,9 @@
-import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes, Put } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateCartDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -125,5 +125,26 @@ export class AdminController {
             throw new BadRequestException();
         }
     }
+
+    @UseGuards(AdminGuard)
+    @Put("activate-warehouse")
+    async activateWarehouse(@Body(new ValidationPipe()) payload: ToggleWarehouseDto){
+        try {
+            return this.service.toggleWarehouse(payload.warehouse, true)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("deactivate-warehouse")
+    async deactivateWarehouse(@Body(new ValidationPipe()) payload: ToggleWarehouseDto){
+        try {
+            return this.service.toggleWarehouse(payload.warehouse, false)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
 
 }

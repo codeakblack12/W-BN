@@ -1,7 +1,8 @@
-import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { Currency } from "src/inventory/dto/post.dto";
 import { SALE_LOCATIONS, TRANSACTION_STATUS } from "src/sales/schemas/sales.schema";
+import { ObjectId, Types, isObjectIdOrHexString, isValidObjectId } from "mongoose";
 
 
 export class AddCurrencyDto {
@@ -111,4 +112,11 @@ export class GetStatisticsDto {
     @ApiProperty()
     @IsNotEmpty()
     warehouse: string;
+}
+
+export class ToggleWarehouseDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsMongoId()
+    warehouse: ObjectId;
 }
