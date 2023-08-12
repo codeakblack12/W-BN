@@ -28,7 +28,7 @@ export class Price {
 export class CreateCategoryDto {
     @ApiProperty()
     @MinLength(2)
-    @NotContains(" ")
+    // @NotContains(" ")
     name: string;
 
     @ApiProperty()

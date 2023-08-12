@@ -83,7 +83,7 @@ export class AdminService {
             throw new BadRequestException("Category already exists");
         }
 
-        const nanoid = customAlphabet(name.toLowerCase())
+        const nanoid = customAlphabet(name.replace(/\s/g, '').toLowerCase())
 
         const category_code = `${name[0].toLowerCase()}${nanoid(2)}`
 
