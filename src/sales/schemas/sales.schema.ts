@@ -163,7 +163,10 @@ export class CreateCart {
 
 }
 
-export class CreateDockyardCart {}
+export class CreateDockyardCart {
+    @Prop()
+    warehouse: string;
+}
 
 export class AddToCart {
 
