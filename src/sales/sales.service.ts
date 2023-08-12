@@ -379,12 +379,12 @@ export class SalesService {
 
     }
 
-    async getDockyardCarts(user: User){
+    async getDockyardCarts(user: User, warehouse: string){
 
         const warehouse_ = user?.warehouse
 
         const carts = await this.dockyardcartModel.find({
-            warehouse: {$in: warehouse_},
+            warehouse: warehouse,
             confirmed: false
         })
 

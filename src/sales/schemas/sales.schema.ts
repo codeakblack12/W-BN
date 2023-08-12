@@ -186,6 +186,9 @@ export class AddToDockyardCart {
     @Prop()
     category: string;
 
+    @Prop()
+    warehouse: string;
+
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart)
