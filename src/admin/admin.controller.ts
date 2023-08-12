@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -79,6 +79,16 @@ export class AdminController {
             return this.service.getUsers(query)
         } catch (error) {
             throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Get('warehouses')
+    async getWarehouses(@Query() query: GetWarehouseDto){
+        try {
+            return this.service.getWarehouses(query)
+        } catch (error) {
+            throw new BadRequestException(error);
         }
     }
 

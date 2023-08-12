@@ -53,6 +53,15 @@ export class GetInventoryDto {
 
 }
 
+export class GetWarehouseDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
+
+}
+
 
 export class GetUsersDto {
     @ApiProperty()

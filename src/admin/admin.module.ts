@@ -5,7 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { SalesModule } from 'src/sales/sales.module';
 import { AuthModule } from 'src/auth/auth.module';
-import { UserSchema } from 'src/auth/schemas/auth.schema';
+import { UserSchema, WarehouseSchema } from 'src/auth/schemas/auth.schema';
 import { CartSchema, TransactionSchema } from 'src/sales/schemas/sales.schema';
 import { CategorySchema, InventorySchema } from 'src/inventory/schemas/inventory.schema';
 import { CountrySchema } from './schemas/admin.schema';
@@ -23,6 +23,7 @@ import { CountrySchema } from './schemas/admin.schema';
     MongooseModule.forFeature([{name: 'Category', schema: InventorySchema}]),
     MongooseModule.forFeature([{name: 'Inventory', schema: CategorySchema}]),
     MongooseModule.forFeature([{name: 'Country', schema: CountrySchema}]),
+    MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
     MongooseModule.forFeature([{name: 'Transaction', schema: TransactionSchema}]),
   ],
   controllers: [AdminController],

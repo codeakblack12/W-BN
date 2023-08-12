@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role, User } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto } from './dto/post.dto';
+import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -26,6 +26,8 @@ export class AdminService {
         private countryModel: mongoose.Model<Country>,
         @InjectModel(Transaction.name)
         private transactionModel: mongoose.Model<Transaction>,
+        @InjectModel(Warehouse.name)
+        private warehouseModel: mongoose.Model<Warehouse>,
 
     ){}
 
@@ -458,5 +460,35 @@ export class AdminService {
                 total: total_stocks
             }
         }
+    }
+
+    async getWarehouses(query: GetWarehouseDto){
+        const page = Number(query.page) || 1
+        const limit = Number(query.limit) || 10
+
+        const warehouses = await this.warehouseModel.find({})
+        .sort({ "createdAt": 1})
+        .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        .limit(limit)
+
+        const total_warehouses = await this.warehouseModel.find({}).count()
+        const number_of_pages = Math.ceil(total_warehouses / Number(limit))
+
+        const processed = await warehouses.map((warehouse) => {
+            const proc = {
+                ...warehouse.toJSON(),
+                status: warehouse.active ? "Active" : "Inactive"
+            }
+            delete proc.active
+            return proc
+        })
+
+        return {
+            data: processed,
+            total: total_warehouses,
+            pages: number_of_pages,
+            next: page + 1 > number_of_pages ? "" : Number(page) + 1
+        }
+
     }
 }
