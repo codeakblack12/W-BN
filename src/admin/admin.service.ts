@@ -209,7 +209,7 @@ export class AdminService {
 
         const find_query = {
             category: category,
-            warehouse: warehouse,
+            warehouse: { $regex: warehouse },
             inStock: true
         }
 

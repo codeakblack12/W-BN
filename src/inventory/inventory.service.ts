@@ -61,7 +61,7 @@ export class InventoryService {
         }
     }
 
-    async addOrRemove(id: string, type: "plus" | "minus", user: User){
+    async addOrRemove(id: string, type: "plus" | "minus", user: User, warehouse?: string){
         let payload
 
         if(type === "plus"){
@@ -93,7 +93,7 @@ export class InventoryService {
                 code: item_arr[0],
                 ref: item_arr[1],
                 category: categories.name,
-                warehouse: user.warehouse[0],
+                warehouse: warehouse,
                 inStock: true
             })
 

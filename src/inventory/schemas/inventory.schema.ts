@@ -50,6 +50,9 @@ export class Inventory {
 export class AddToInventory {
     @Prop()
     id: string;
+
+    @Prop()
+    warehouse: string;
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category)

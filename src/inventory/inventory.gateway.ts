@@ -38,9 +38,9 @@ export class InventoryGateway {
     try {
       const user: User = await this.authService.getUserFromSocket(socket)
 
-      const response = await this.service.addOrRemove(body.id, 'plus', user)
+      const response = await this.service.addOrRemove(body.id, 'plus', user, body.warehouse)
 
-      this.server.emit(`INVENTORY-${user.warehouse[0]}`, response)
+      this.server.emit(`INVENTORY-${body.warehouse}`, response)
 
     } catch (error) {
       console.log(error)
