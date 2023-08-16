@@ -1,13 +1,25 @@
-import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes, Put } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes, Put, StreamableFile } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateCartDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { ObjectId } from 'mongoose';
 
 @Controller('admin')
 export class AdminController {
     constructor(private readonly service: AdminService) {}
+
+    // @UseGuards(AdminGuard)
+    @Get('generate-codes')
+    async generateBarcodes(@Query() query: GenerateBarcodeDto){
+        try {
+            const file = await this.service.generateBarcodes(query)
+            return new StreamableFile(file)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
 
     @UseGuards(AdminGuard)
     @Post('category/create')
@@ -15,7 +27,7 @@ export class AdminController {
         try {
             return this.service.createCategory(payload)
         } catch (error) {
-            throw new BadRequestException();
+            throw new BadRequestException(error);
         }
     }
 

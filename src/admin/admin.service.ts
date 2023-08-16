@@ -1,15 +1,17 @@
-import mongoose, { ObjectId, Types } from 'mongoose';
+import mongoose, { ObjectId, Types, isObjectIdOrHexString } from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
 import moment from 'moment';
+import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
+import { generatePdf } from "html-pdf-node"
 
 @Injectable()
 export class AdminService {
@@ -543,5 +545,40 @@ export class AdminService {
         return {
             message: "Successful"
         }
+    }
+
+    async generateBarcodes({ category, amt }: GenerateBarcodeDto){
+
+        const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
+
+        const cat = await this.categoryModel.findById(category)
+
+        if(!cat){
+            throw new BadRequestException("Category does not exists");
+        }
+
+        let ids = []
+
+        for(var i = 0; i < amt; i++){
+            ids.push({
+                id: `${cat.code}-${nanoid(10)}`,
+                title: cat.name,
+                code: cat.code
+            })
+        }
+
+        const PDF_BODY = await BarcodeBody(ids)
+
+        let options = {
+            width: '377px',
+            height: '340px',
+            // preferCSSPageSize: true
+         };
+
+        let file = await { content: PDF_BODY};
+
+        const output = await generatePdf(file, options)
+
+        return output
     }
 }

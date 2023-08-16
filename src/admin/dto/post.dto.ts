@@ -120,3 +120,13 @@ export class ToggleWarehouseDto {
     @IsMongoId()
     warehouse: ObjectId;
 }
+
+export class GenerateBarcodeDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsMongoId()
+    category: ObjectId;
+
+    @ApiProperty()
+    amt: number;
+}
