@@ -109,7 +109,7 @@ export class SalesGateway {
       const response = await this.service.addToDockyardCart(user, body)
 
       this.server.emit(body.cart, response)
-      this.server.emit(`DOCKYARD-${body.warehouse}`, response)
+      this.server.emit(`DOCKYARD-${user.warehouse[0]}`, response)
 
     } catch (error) {
       console.log(error)
@@ -125,7 +125,7 @@ export class SalesGateway {
       const response = await this.service.deleteFromDockyardCart(user, body)
 
       this.server.emit(body.cart, response)
-      this.server.emit(`DOCKYARD-${body.warehouse}`, response)
+      this.server.emit(`DOCKYARD-${user.warehouse[0]}`, response)
 
     } catch (error) {
       console.log(error)
