@@ -113,6 +113,7 @@ export class SalesGateway {
 
     } catch (error) {
       console.log(error)
+
       // throw new WsException(error);
     }
   }
