@@ -189,8 +189,8 @@ export class AddToDockyardCart {
     @Prop()
     category: string;
 
-    @Prop()
-    warehouse: string;
+    // @Prop()
+    // warehouse: string;
 
 }
 
