@@ -3,7 +3,7 @@ import { SalesService } from './sales.service';
 import { SalesGuard } from './sales.guard';
 import { ObjectId } from 'mongoose';
 import { SalesGateway } from './sales.gateway';
-import { CheckoutDockyardCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
 
 @Controller('sales')
 export class SalesController {
@@ -95,6 +95,18 @@ export class SalesController {
         }
     }
 
+    // Get Dockyard Cart Items
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('dockyard-cart-items/:_id')
+    async getDockyardCartItems(@Request() req, @Param() params: {_id: string}){
+        try {
+            return this.service.getDockyardCartItems(params._id)
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
     // Checkout Dockyard Cart
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
@@ -105,6 +117,14 @@ export class SalesController {
         } catch (error) {
             throw new BadRequestException(error)
         }
+    }
+
+    // Add To Dockyard Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('dockyard-cart/add')
+    async addToDockyardCart(@Request() req, @Body(new ValidationPipe()) payload: AddItemsToDockyardCartDto){
+        return this.service.addToDockyardCart(req.user, payload)
     }
 
     // Checkout Cart
@@ -152,7 +172,7 @@ export class SalesController {
         }
     }
 
-    // Momo Webhook
+    // Paystack Webhook
     @Post('payment/paystack-webhook')
     async paystackWebhook(@Body(new ValidationPipe()) payload: any){
         try {

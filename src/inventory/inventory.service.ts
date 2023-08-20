@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { InjectModel } from '@nestjs/mongoose';
 import { Category, Inventory } from './schemas/inventory.schema';
 import * as mongoose from 'mongoose';
-import { User } from 'src/auth/schemas/auth.schema';
+import { User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { CreateCategoryDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { WsException } from '@nestjs/websockets';
@@ -15,6 +15,8 @@ export class InventoryService {
         private categoryModel: mongoose.Model<Category>,
         @InjectModel(Inventory.name)
         private inventoryModel: mongoose.Model<Inventory>,
+        @InjectModel(Warehouse.name)
+        private warehouseModel: mongoose.Model<Warehouse>
     ) {}
 
     async createCategory(payload: CreateCategoryDto){
@@ -45,9 +47,18 @@ export class InventoryService {
         }
     }
 
-    async getCategories(){
+    async getCategories(warehouse: string){
 
-        const categories = await this.categoryModel.find()
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
+        const categories = await this.categoryModel.find(
+            {
+                price: {"$elemMatch": {currency: this_warehouse?.currency || "GHS"}}
+            },
+            {'price.$': 1, name: 1, code: 1}
+        )
 
         return {
             data: categories

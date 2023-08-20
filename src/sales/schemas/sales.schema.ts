@@ -41,6 +41,34 @@ export class Item {
 
 }
 
+@Schema({
+    timestamps: true
+})
+export class DockItem {
+
+    @Prop()
+    category: string;
+
+    @Prop()
+    quantity: number;
+
+    @Prop()
+    unit_price: number;
+
+    @Prop()
+    currency: string;
+
+    @Prop()
+    price: number;
+
+    @Prop()
+    vat: number;
+
+    @Prop()
+    covidVat: number;
+
+}
+
 export class TransactionCart {
 
     @Prop()
@@ -149,7 +177,7 @@ export class DockyardCart {
     confirmed: boolean;
 
     @Prop()
-    items: Item[];
+    items: DockItem[];
 
 }
 
@@ -189,8 +217,8 @@ export class AddToDockyardCart {
     @Prop()
     category: string;
 
-    // @Prop()
-    // warehouse: string;
+    @Prop()
+    warehouse: string;
 
 }
 

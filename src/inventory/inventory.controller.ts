@@ -14,9 +14,11 @@ export class InventoryController {
         return this.service.generateCodes(+amt)
     }
 
-    @Get('category')
-    async getCategories(){
-        return this.service.getCategories()
+    @Get('category/:warehouse?')
+    async getCategories(
+        @Param('warehouse') warehouse: string
+    ){
+        return this.service.getCategories(warehouse)
     }
 
     // @UseGuards(InventoryGuard)

@@ -1,5 +1,6 @@
 import * as JsBarcode from 'jsbarcode';
 import { formatMoney } from './common';
+import moment from 'moment';
 
 export function receiptHeader(){
     return `
@@ -170,12 +171,12 @@ export function receiptHeader(){
     `
 }
 
-export function receiptBody(summary, handler, cart, location, barcode){
+export function receiptBody(summary, handler, cart, location, barcode, date){
     return`
         <body>
             <main>
                 ${recieptBodyHeader()}
-                ${receiptDetails(summary, handler, cart, location)}
+                ${receiptDetails(summary, handler, cart, location, date)}
                 ${receiptItemTable(summary?.items, summary?.currency)}
                 ${receiptTotal(summary)}
                 ${Barcode(barcode)}
@@ -196,13 +197,13 @@ function recieptBodyHeader(){
     `
 }
 
-function receiptDetails(summary, handler, cart, location){
+function receiptDetails(summary, handler, cart, location, date){
     return`
         <section style="padding-top: 30px;" class="info-section">
             <div class="">
                 <p class="info">
                     <span>Date & Time:</span>
-                    <span>23 May 2023, 10:34 am</span>
+                    <span>${date}</span>
                 </p>
 
                 <p class="info">
@@ -265,9 +266,19 @@ function receiptTotal(summary){
                 <p class="amount">${formatMoney(summary?.subtotal, summary?.currency)}</p>
             </div>
             <hr>
+            <div class="sub-total">
+                <p>NHIL/GETFD/COVID (${Math.round(summary?.covidVatValue * 10) / 10 || "0"}%)</p>
+                <p class="amount">${formatMoney(summary?.covidVat || 0, summary?.currency)}</p>
+            </div>
+            <hr>
+            <div class="sub-total">
+                <p>VAT(${Math.round(summary?.vatValue * 10) / 10 || "0"}%)</p>
+                <p class="amount">${formatMoney(summary?.vat || 0, summary?.currency)}</p>
+            </div>
+            <hr>
             <div class="total">
 				<p>Total</p>
-				<p class="amount">${formatMoney(summary?.subtotal, summary?.currency)}</p>
+				<p class="amount">${formatMoney(summary?.total, summary?.currency)}</p>
 			</div>
             <hr>
         </section>

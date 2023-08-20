@@ -33,6 +33,8 @@ export class AdminService {
 
     ){}
 
+    // CREATE SERVICES
+
     async createCountry(payload: AddCurrencyDto){
         const { country, currency } = payload
 
@@ -54,16 +56,6 @@ export class AdminService {
 
         return {
             message: "Successful"
-        }
-
-    }
-
-    async getCountries(){
-
-        const countries = await this.countryModel.find()
-
-        return {
-            data: countries
         }
 
     }
@@ -99,12 +91,80 @@ export class AdminService {
             name: name.toLocaleLowerCase(),
             code: category_code,
             price,
-            stockThreshold
+            stockThreshold,
+            vat: payload.vat,
+            covidVat: payload.covidVat
         })
 
         return {
             message: "Successful"
         }
+    }
+
+
+    // DELETE SERVICES
+
+    async deleteCategory(id: ObjectId){
+        await this.categoryModel.deleteOne({
+            "_id": id
+        })
+
+        return {
+            message: "Successful"
+        }
+    }
+
+    async deleteInventory(id: ObjectId){
+        await this.inventoryModel.deleteOne({
+            "_id": id
+        })
+
+        return {
+            message: "Successful"
+        }
+    }
+
+    async deleteWarehouse(id: ObjectId){
+        await this.warehouseModel.deleteOne({
+            "_id": id
+        })
+
+        return {
+            message: "Successful"
+        }
+    }
+
+    async deleteUser(id: ObjectId){
+        await this.userModel.deleteOne({
+            "_id": id
+        })
+
+        return {
+            message: "Successful"
+        }
+    }
+
+    async deleteTransaction(id: ObjectId){
+        await this.transactionModel.deleteOne({
+            "_id": id
+        })
+
+        return {
+            message: "Successful"
+        }
+    }
+
+
+    // READ SERVICES
+
+    async getCountries(){
+
+        const countries = await this.countryModel.find()
+
+        return {
+            data: countries
+        }
+
     }
 
     async getTransactions(
@@ -530,23 +590,6 @@ export class AdminService {
 
     }
 
-    async toggleWarehouse(warehouse: ObjectId, status: boolean){
-        const ware_ = await this.warehouseModel.findById(warehouse)
-        if(!ware_){
-            throw new BadRequestException("Warehouse does not exists");
-        }
-        await this.warehouseModel.findOneAndUpdate(
-            { '_id': warehouse },
-            {'$set': {
-                active: status
-            }}
-        )
-
-        return {
-            message: "Successful"
-        }
-    }
-
     async generateBarcodes({ category, amt }: GenerateBarcodeDto){
 
         const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
@@ -561,7 +604,7 @@ export class AdminService {
 
         for(var i = 0; i < amt; i++){
             ids.push({
-                id: `${cat.code}-${nanoid(10)}`,
+                id: `${cat.code}-${nanoid(5)}`,
                 title: cat.name,
                 code: cat.code
             })
@@ -580,5 +623,24 @@ export class AdminService {
         const output = await generatePdf(file, options)
 
         return output
+    }
+
+
+    // UPDATE SERVICES
+    async toggleWarehouse(warehouse: ObjectId, status: boolean){
+        const ware_ = await this.warehouseModel.findById(warehouse)
+        if(!ware_){
+            throw new BadRequestException("Warehouse does not exists");
+        }
+        await this.warehouseModel.findOneAndUpdate(
+            { '_id': warehouse },
+            {'$set': {
+                active: status
+            }}
+        )
+
+        return {
+            message: "Successful"
+        }
     }
 }
