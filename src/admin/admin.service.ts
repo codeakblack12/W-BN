@@ -268,10 +268,12 @@ export class AdminService {
         const page = Number(query.page) || 1
         const limit = Number(query.limit) || 10
         const warehouse = query.warehouse || ""
+        const name = query.name || ""
 
         const find_query = {
             category: category,
             warehouse: { $regex: warehouse },
+            ref: { $regex: name },
             inStock: true
         }
 
