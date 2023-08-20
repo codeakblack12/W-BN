@@ -44,4 +44,12 @@ export class CreateCategoryDto {
     @Min(1)
     stockThreshold: number
 
+    @ApiProperty()
+    @Prop()
+    vat: number
+
+    @ApiProperty()
+    @Prop()
+    covidVat: number
+
 }

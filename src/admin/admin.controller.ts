@@ -1,25 +1,16 @@
 import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes, Put, StreamableFile } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { CreateCartDto } from 'src/sales/dto/post.dto';
+import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
 import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
-import { ObjectId } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 
 @Controller('admin')
 export class AdminController {
     constructor(private readonly service: AdminService) {}
 
-    // @UseGuards(AdminGuard)
-    @Get('generate-codes')
-    async generateBarcodes(@Query() query: GenerateBarcodeDto){
-        try {
-            const file = await this.service.generateBarcodes(query)
-            return new StreamableFile(file)
-        } catch (error) {
-            throw new BadRequestException();
-        }
-    }
+    // POST CONTROLLERS
 
     @UseGuards(AdminGuard)
     @Post('category/create')
@@ -41,11 +32,25 @@ export class AdminController {
         }
     }
 
+
+    // GET CONTROLLERS
+
     @UseGuards(AdminGuard)
     @Get('countries')
     async getCountries(){
         try {
             return this.service.getCountries()
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    // @UseGuards(AdminGuard)
+    @Get('generate-codes')
+    async generateBarcodes(@Query() query: GenerateBarcodeDto){
+        try {
+            const file = await this.service.generateBarcodes(query)
+            return new StreamableFile(file)
         } catch (error) {
             throw new BadRequestException();
         }
@@ -138,6 +143,9 @@ export class AdminController {
         }
     }
 
+
+    // PUT CONTROLLERS
+
     @UseGuards(AdminGuard)
     @Put("activate-warehouse")
     async activateWarehouse(@Body(new ValidationPipe()) payload: ToggleWarehouseDto){
@@ -158,5 +166,41 @@ export class AdminController {
         }
     }
 
+    // DELETE CONTROLLERS
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('category/:_id')
+    async deleteCategory(@Request() req, @Param() params: ObjectIdDto){
+        return this.service.deleteCategory(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('inventory/:_id')
+    async deleteInventory(@Request() req, @Param() params: ObjectIdDto){
+        return this.service.deleteInventory(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('warehouse/:_id')
+    async deleteWarehouse(@Request() req, @Param() params: ObjectIdDto){
+        return this.service.deleteWarehouse(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('user/:_id')
+    async deleteUser(@Request() req, @Param() params: ObjectIdDto){
+        return this.service.deleteUser(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('transaction/:_id')
+    async deleteTransaction(@Request() req, @Param() params: ObjectIdDto){
+        return this.service.deleteTransaction(params._id)
+    }
 
 }

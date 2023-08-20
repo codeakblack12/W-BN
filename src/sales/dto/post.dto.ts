@@ -1,7 +1,7 @@
 import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, IsMongoId, IsOptional } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { ObjectId } from "mongoose";
-import { PAY_METHODS, SALE_LOCATIONS } from "../schemas/sales.schema";
+import { DockItem, PAY_METHODS, SALE_LOCATIONS } from "../schemas/sales.schema";
 import { Currency } from "src/inventory/dto/post.dto";
 
 export class ObjectIdDto {
@@ -95,11 +95,19 @@ export class AddToDockyardCartDto {
     cart: string;
 
     @ApiProperty()
-    @NotContains(" ")
-    item: string;
+    @IsNotEmpty()
+    item: DockItem[];
 
+}
+
+
+export class AddItemsToDockyardCartDto {
     @ApiProperty()
     @NotContains(" ")
-    category: string;
+    cart: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    items: DockItem[];
 
 }

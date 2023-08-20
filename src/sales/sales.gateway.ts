@@ -87,7 +87,6 @@ export class SalesGateway {
   @SubscribeMessage('add_to_cart')
   async addToCart(@MessageBody(new ValidationPipe({ transform: true })) body: AddToCart, @ConnectedSocket() socket) {
     try {
-
       const user: User = await this.authService.getUserFromSocket(socket)
       const response = await this.service.addToCart(user, body)
 
@@ -103,35 +102,34 @@ export class SalesGateway {
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('add_to_dockyard_cart')
   async addToDockyardCart(@MessageBody(new ValidationPipe({ transform: true })) body: AddToDockyardCart, @ConnectedSocket() socket) {
-    try {
+    // try {
 
-      const user: User = await this.authService.getUserFromSocket(socket)
-      const response = await this.service.addToDockyardCart(user, body)
+    //   const user: User = await this.authService.getUserFromSocket(socket)
+    //   const response = await this.service.addToDockyardCart(user, body)
 
-      this.server.emit(body.cart, response)
-      this.server.emit(`DOCKYARD-${user.warehouse[0]}`, response)
+    //   this.server.emit(body.cart, response)
+    //   this.server.emit(`DOCKYARD-${body.warehouse}`, response)
 
-    } catch (error) {
-      console.log(error)
-
-      // throw new WsException(error);
-    }
+    // } catch (error) {
+    //   console.log(error)
+    //   // throw new WsException(error);
+    // }
   }
 
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('delete_from_dockyard_cart')
   async deleteFromDockyardCart(@MessageBody(new ValidationPipe({ transform: true })) body: AddToDockyardCart, @ConnectedSocket() socket) {
-    try {
-      const user: User = await this.authService.getUserFromSocket(socket)
-      const response = await this.service.deleteFromDockyardCart(user, body)
+    // try {
+    //   const user: User = await this.authService.getUserFromSocket(socket)
+    //   const response = await this.service.deleteFromDockyardCart(user, body)
 
-      this.server.emit(body.cart, response)
-      this.server.emit(`DOCKYARD-${user.warehouse[0]}`, response)
+    //   this.server.emit(body.cart, response)
+    //   this.server.emit(`DOCKYARD-${body.warehouse}`, response)
 
-    } catch (error) {
-      console.log(error)
-      // throw new WsException(error);
-    }
+    // } catch (error) {
+    //   console.log(error)
+    //   // throw new WsException(error);
+    // }
   }
 
 }

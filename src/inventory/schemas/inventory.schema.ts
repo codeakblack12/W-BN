@@ -19,6 +19,12 @@ export class Category {
     @Prop()
     stockThreshold: number
 
+    @Prop()
+    vat: number
+
+    @Prop()
+    covidVat: number
+
 }
 
 @Schema({

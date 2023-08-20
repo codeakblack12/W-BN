@@ -20,7 +20,7 @@ export function BarcodeBody(arr){
                             <p style="font-size: 24px; font-weight: 700; color: #333; margin: 0;">${data.code}</p>
                         </div>
 
-                        <img style="width: 100%;" src="https://barcode.tec-it.com/barcode.ashx?data=${data.id}&code=Code128&translate-esc=on&dmsize=Default " alt="barcode">
+                        <img style="width: 100%;" src="https://www.cognex.com/api/Sitecore/Barcode/Get?data=${data.id}&code=BCL_CODE128&width=600&imageType=JPG&foreColor=%23000000&backColor=%23FFFFFF&rotation=RotateNoneFlipNone" alt="barcode">
 
                         <img style="position: absolute; top: 20px; right: 16px; width: 42px; height: 42px; border-radius: 50px;" src="https://ik.imagekit.io/xztlkr1o2/Frame%201171277829.jpg?updatedAt=1691551530165" alt="">
                     </div>
