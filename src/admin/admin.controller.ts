@@ -5,6 +5,7 @@ import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
 import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
+import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -161,6 +162,45 @@ export class AdminController {
     async deactivateWarehouse(@Body(new ValidationPipe()) payload: ToggleWarehouseDto){
         try {
             return this.service.toggleWarehouse(payload.warehouse, false)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("category/update/:_id")
+    async categoryUpdate(
+        @Param() params: ObjectIdDto,
+        @Body(new ValidationPipe()) payload: CreateCategoryDto
+    ){
+        try {
+            return this.service.updateCategory(params._id, payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("warehouse/update/:_id")
+    async warehouseUpdate(
+        @Param() params: ObjectIdDto,
+        @Body(new ValidationPipe()) payload: CreateWarehouseDto
+    ){
+        try {
+            return this.service.updateWarehouse(params._id, payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("user/update/:_id")
+    async userUpdate(
+        @Param() params: ObjectIdDto,
+        @Body(new ValidationPipe()) payload: RegisterUserDto
+    ){
+        try {
+            return this.service.updateUser(params._id, payload)
         } catch (error) {
             throw new BadRequestException();
         }

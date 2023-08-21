@@ -12,6 +12,7 @@ import { getDateRangeArray } from 'src/components/common/functions/common';
 import moment from 'moment';
 import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
 import { generatePdf } from "html-pdf-node"
+import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
 @Injectable()
 export class AdminService {
@@ -643,6 +644,24 @@ export class AdminService {
 
         return {
             message: "Successful"
+        }
+    }
+
+    async updateCategory(category: ObjectId, payload: CreateCategoryDto){
+        return {
+
+        }
+    }
+
+    async updateWarehouse(warehouse: ObjectId, payload: CreateWarehouseDto){
+        return {
+
+        }
+    }
+
+    async updateUser(user: ObjectId, payload: RegisterUserDto){
+        return {
+
         }
     }
 }
