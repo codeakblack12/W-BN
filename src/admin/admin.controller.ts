@@ -168,7 +168,7 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
-    @Put("category/update/:_id")
+    @Put("category/:_id")
     async categoryUpdate(
         @Param() params: ObjectIdDto,
         @Body(new ValidationPipe()) payload: CreateCategoryDto
@@ -181,7 +181,7 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
-    @Put("warehouse/update/:_id")
+    @Put("warehouse/:_id")
     async warehouseUpdate(
         @Param() params: ObjectIdDto,
         @Body(new ValidationPipe()) payload: CreateWarehouseDto
@@ -194,7 +194,7 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
-    @Put("user/update/:_id")
+    @Put("user/:_id")
     async userUpdate(
         @Param() params: ObjectIdDto,
         @Body(new ValidationPipe()) payload: RegisterUserDto
