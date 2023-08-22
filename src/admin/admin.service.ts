@@ -176,7 +176,7 @@ export class AdminService {
         const limit_ = limit || 10
 
         const query = {
-            "reference": { $regex: ref || "" },
+            "reference": { $regex: ref || "", $options: 'i' },
             "status": { $regex: status || "" },
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
@@ -230,7 +230,7 @@ export class AdminService {
                     stock: 1,
                     stockThreshold: 1,
                     vat: 1,
-                    covidvat: 1,
+                    covidVat: 1,
                     price: 1,
                     status: {
                         $switch: {
@@ -245,7 +245,7 @@ export class AdminService {
             },
             {
                 $match: {
-                    name: {$regex: name},
+                    name: {$regex: name, $options: 'i'},
                     status: {$regex: status}
                 }
             },
@@ -278,7 +278,7 @@ export class AdminService {
         const find_query = {
             category: category,
             warehouse: { $regex: warehouse },
-            ref: { $regex: name },
+            ref: { $regex: name, $options: 'i' },
             inStock: true
         }
 
@@ -305,7 +305,7 @@ export class AdminService {
             'MANAGER': 'Manager',
             'INVENTORY': 'Inventory Manager',
             'SALES': 'Sales',
-            'SECURITY': 'Securty'
+            'SECURITY': 'Security'
         }
 
         let string = ""
@@ -666,12 +666,54 @@ export class AdminService {
             }
         )
 
+        const aggregate = [
+            { $match: { code: category.code } },
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "name",
+                    foreignField: "category",
+                    pipeline: [
+                        {   $match: {
+                                inStock: true
+                            }
+                        }
+                    ],
+                    as: "items"
+                },
+            },
+            { $addFields: {
+                stock: {$size: "$items"},
+            }},
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    code: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    stock: 1,
+                    stockThreshold: 1,
+                    vat: 1,
+                    covidVat: 1,
+                    price: 1,
+                    status: {
+                        $switch: {
+                            "branches": [
+                                { "case": { "$gt": [ "$stock", "$stockThreshold" ] }, "then": "In Stock" },
+                                { "case": { "$eq": [ "$stock", 0 ] }, "then": "Out of Stock" }
+                            ],
+                            "default": "Low in Stock"
+                        }
+                    }
+                }
+            },
+        ]
+
+        const newCategory = await this.categoryModel.aggregate(aggregate)
+
         return {
-            _id: categoryId,
-            code: category.code,
-            ...payload,
-            vat: category.vat,
-            covidVat: category.covidVat
+            data: newCategory[0]
         }
     }
 

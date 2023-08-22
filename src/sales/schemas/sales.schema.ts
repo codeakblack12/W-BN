@@ -16,7 +16,7 @@ export enum SALE_LOCATIONS {
 export enum TRANSACTION_STATUS {
     PENDING = 'PENDING',
     COMPLETED = 'COMPLETED',
-    CANCELLED = 'CANCELLED',
+    CANCELED = 'CANCELED',
 }
 
 @Schema({
