@@ -229,6 +229,8 @@ export class AdminService {
                     updatedAt: 1,
                     stock: 1,
                     stockThreshold: 1,
+                    vat: 1,
+                    covidvat: 1,
                     price: 1,
                     status: {
                         $switch: {
@@ -270,6 +272,8 @@ export class AdminService {
         const limit = Number(query.limit) || 10
         const warehouse = query.warehouse || ""
         const name = query.name || ""
+
+        console.log(query)
 
         const find_query = {
             category: category,
@@ -647,21 +651,69 @@ export class AdminService {
         }
     }
 
-    async updateCategory(category: ObjectId, payload: CreateCategoryDto){
-        return {
+    async updateCategory(categoryId: ObjectId, payload: CreateCategoryDto){
 
+        const category = await this.categoryModel.findById(categoryId)
+
+        if(!category){
+            throw new UnauthorizedException("Category does not exist");
+        }
+
+        await this.categoryModel.findOneAndUpdate(
+            { '_id': categoryId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        return {
+            _id: categoryId,
+            code: category.code,
+            ...payload,
+            vat: category.vat,
+            covidVat: category.covidVat
         }
     }
 
-    async updateWarehouse(warehouse: ObjectId, payload: CreateWarehouseDto){
-        return {
+    async updateWarehouse(warehouseId: ObjectId, payload: CreateWarehouseDto){
+        const warehouse = await this.warehouseModel.findById(warehouseId)
 
+        if(!warehouse){
+            throw new UnauthorizedException("Warehouse does not exist");
+        }
+
+        const newData = await this.warehouseModel.findOneAndUpdate(
+            { '_id': warehouseId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        return {
+            ...payload,
+            _id: warehouseId
         }
     }
 
-    async updateUser(user: ObjectId, payload: RegisterUserDto){
-        return {
+    async updateUser(userId: ObjectId, payload: RegisterUserDto){
 
+        const user = await this.userModel.findById(userId)
+
+        if(!user){
+            throw new UnauthorizedException("User does not exist");
+        }
+
+        const newData = await this.userModel.findOneAndUpdate(
+            { '_id': userId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        return {
+            ...payload,
+            _id: userId
         }
     }
+
 }
