@@ -567,6 +567,8 @@ export class SalesService {
 
         let items = []
         let subtotal = 0
+        // let vat = 0
+        // let covidVat = 0
 
         categories.map((cat) => {
             let qty = 0

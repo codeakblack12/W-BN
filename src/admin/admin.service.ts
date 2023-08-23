@@ -653,6 +653,8 @@ export class AdminService {
 
     async updateCategory(categoryId: ObjectId, payload: CreateCategoryDto){
 
+        console.log(payload)
+
         const category = await this.categoryModel.findById(categoryId)
 
         if(!category){
