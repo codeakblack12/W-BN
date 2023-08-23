@@ -653,6 +653,17 @@ export class AdminService {
 
     async updateCategory(categoryId: ObjectId, payload: CreateCategoryDto){
 
+        const nameExists = await this.categoryModel.findOne({
+            $and: [
+                {_id: { $ne: categoryId }},
+                {name: {$eq: payload.name.toLocaleLowerCase()}}
+            ]
+        })
+
+        if(nameExists){
+            throw new BadRequestException("Category with similar name already exists.");
+        }
+
         const category = await this.categoryModel.findById(categoryId)
 
         if(!category){
