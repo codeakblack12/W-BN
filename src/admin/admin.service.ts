@@ -12,6 +12,7 @@ import { getDateRangeArray } from 'src/components/common/functions/common';
 import moment from 'moment';
 import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
 import { generatePdf } from "html-pdf-node"
+import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
 @Injectable()
 export class AdminService {
@@ -175,7 +176,7 @@ export class AdminService {
         const limit_ = limit || 10
 
         const query = {
-            "reference": { $regex: ref || "" },
+            "reference": { $regex: ref || "", $options: 'i' },
             "status": { $regex: status || "" },
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
@@ -228,6 +229,8 @@ export class AdminService {
                     updatedAt: 1,
                     stock: 1,
                     stockThreshold: 1,
+                    vat: 1,
+                    covidVat: 1,
                     price: 1,
                     status: {
                         $switch: {
@@ -242,7 +245,7 @@ export class AdminService {
             },
             {
                 $match: {
-                    name: {$regex: name},
+                    name: {$regex: name, $options: 'i'},
                     status: {$regex: status}
                 }
             },
@@ -268,10 +271,14 @@ export class AdminService {
         const page = Number(query.page) || 1
         const limit = Number(query.limit) || 10
         const warehouse = query.warehouse || ""
+        const name = query.name || ""
+
+        console.log(query)
 
         const find_query = {
             category: category,
             warehouse: { $regex: warehouse },
+            ref: { $regex: name, $options: 'i' },
             inStock: true
         }
 
@@ -298,7 +305,7 @@ export class AdminService {
             'MANAGER': 'Manager',
             'INVENTORY': 'Inventory Manager',
             'SALES': 'Sales',
-            'SECURITY': 'Securty'
+            'SECURITY': 'Security'
         }
 
         let string = ""
@@ -643,4 +650,112 @@ export class AdminService {
             message: "Successful"
         }
     }
+
+    async updateCategory(categoryId: ObjectId, payload: CreateCategoryDto){
+
+        const category = await this.categoryModel.findById(categoryId)
+
+        if(!category){
+            throw new UnauthorizedException("Category does not exist");
+        }
+
+        await this.categoryModel.findOneAndUpdate(
+            { '_id': categoryId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        const aggregate = [
+            { $match: { code: category.code } },
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "name",
+                    foreignField: "category",
+                    pipeline: [
+                        {   $match: {
+                                inStock: true
+                            }
+                        }
+                    ],
+                    as: "items"
+                },
+            },
+            { $addFields: {
+                stock: {$size: "$items"},
+            }},
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    code: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    stock: 1,
+                    stockThreshold: 1,
+                    vat: 1,
+                    covidVat: 1,
+                    price: 1,
+                    status: {
+                        $switch: {
+                            "branches": [
+                                { "case": { "$gt": [ "$stock", "$stockThreshold" ] }, "then": "In Stock" },
+                                { "case": { "$eq": [ "$stock", 0 ] }, "then": "Out of Stock" }
+                            ],
+                            "default": "Low in Stock"
+                        }
+                    }
+                }
+            },
+        ]
+
+        const newCategory = await this.categoryModel.aggregate(aggregate)
+
+        return {
+            data: newCategory[0]
+        }
+    }
+
+    async updateWarehouse(warehouseId: ObjectId, payload: CreateWarehouseDto){
+        const warehouse = await this.warehouseModel.findById(warehouseId)
+
+        if(!warehouse){
+            throw new UnauthorizedException("Warehouse does not exist");
+        }
+
+        const newData = await this.warehouseModel.findOneAndUpdate(
+            { '_id': warehouseId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        return {
+            ...payload,
+            _id: warehouseId
+        }
+    }
+
+    async updateUser(userId: ObjectId, payload: RegisterUserDto){
+
+        const user = await this.userModel.findById(userId)
+
+        if(!user){
+            throw new UnauthorizedException("User does not exist");
+        }
+
+        const newData = await this.userModel.findOneAndUpdate(
+            { '_id': userId },
+            {
+                '$set': {...payload}
+            }
+        )
+
+        return {
+            ...payload,
+            _id: userId
+        }
+    }
+
 }

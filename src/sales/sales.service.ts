@@ -563,6 +563,8 @@ export class SalesService {
 
         const categories = await this.categoryModel.find()
 
+        const handler = await this.userModel.findById(cart.handler)
+
         let items = []
         let subtotal = 0
 
@@ -589,6 +591,10 @@ export class SalesService {
             data: {
                 _id: cart._id,
                 uid: cart.uid,
+                merchant: {
+                    firstName: handler?.firstName || "N/A",
+                    lastName: handler?.lastName || "N/A"
+                },
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,

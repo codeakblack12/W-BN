@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId, IsOptional } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { Currency } from "src/inventory/dto/post.dto";
 import { SALE_LOCATIONS, TRANSACTION_STATUS } from "src/sales/schemas/sales.schema";
@@ -29,10 +29,12 @@ export class GetTransactionDto {
 
     @ApiProperty()
     @IsEnum(TRANSACTION_STATUS)
+    @IsOptional()
     status: string;
 
     @ApiProperty()
     @IsEnum(SALE_LOCATIONS)
+    @IsOptional()
     location: string;
 
     @ApiProperty()
