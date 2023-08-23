@@ -653,8 +653,6 @@ export class AdminService {
 
     async updateCategory(categoryId: ObjectId, payload: CreateCategoryDto){
 
-        console.log(payload)
-
         const category = await this.categoryModel.findById(categoryId)
 
         if(!category){
@@ -664,9 +662,14 @@ export class AdminService {
         await this.categoryModel.findOneAndUpdate(
             { '_id': categoryId },
             {
-                '$set': {...payload}
+                '$set': {...payload, name: payload.name.toLocaleLowerCase()}
             }
         )
+
+        await this.inventoryModel.updateMany(
+            { category: category.name.toLocaleLowerCase() },
+            { $set: { "category" : payload.name.toLocaleLowerCase() } }
+        );
 
         const aggregate = [
             { $match: { code: category.code } },
