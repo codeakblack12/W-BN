@@ -39,6 +39,12 @@ export class Item {
     @Prop()
     price: number;
 
+    @Prop()
+    vat: number;
+
+    @Prop()
+    covidVat: number;
+
 }
 
 @Schema({
@@ -147,6 +153,9 @@ export class Cart {
 
     @Prop()
     confirmed: boolean;
+
+    @Prop()
+    closed: boolean;
 
     @Prop()
     items: Item[];

@@ -49,9 +49,13 @@ export class InventoryService {
 
     async getCategories(warehouse: string){
 
+        console.log(warehouse)
+
         const this_warehouse = await this.warehouseModel.findOne({
             identifier: warehouse
         })
+
+        console.log(this_warehouse)
 
         const categories = await this.categoryModel.find(
             {

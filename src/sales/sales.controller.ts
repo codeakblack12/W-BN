@@ -3,7 +3,7 @@ import { SalesService } from './sales.service';
 import { SalesGuard } from './sales.guard';
 import { ObjectId } from 'mongoose';
 import { SalesGateway } from './sales.gateway';
-import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
 
 @Controller('sales')
 export class SalesController {
@@ -71,6 +71,21 @@ export class SalesController {
     async cartSecurityApproval(@Request() req, @Body(new ValidationPipe()) payload: ObjectIdDto){
         try {
             return this.service.cartSecurityApproval(req.user, payload._id)
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
+    // Close Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('cart/close')
+    async closeCart(@Request() req, @Body(new ValidationPipe()) payload: CloseCartDto){
+        try {
+            const resp = await this.service.closeCart(req.user, payload)
+            // await this.salesGateway.server.emit(req.user._id, resp.cart)
+            await this.salesGateway.server.emit(`CLOSE-CART-${resp.warehouse}`, resp.cart);
+            return resp
         } catch (error) {
             throw new BadRequestException(error)
         }
