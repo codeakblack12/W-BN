@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Cart, DockyardCart, Transaction } from './schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import mongoose, { ObjectId } from 'mongoose';
-import { AddItemsToDockyardCartDto, AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { BadRequestException } from '@nestjs/common';
@@ -65,11 +65,38 @@ export class SalesService {
             handler: user._id,
             warehouse: warehouse,
             confirmed: false,
+            closed: false,
             counter,
             items: []
         })
 
         return res
+    }
+
+    async closeCart(user: User, payload: CloseCartDto){
+        const { cart } = payload
+
+        const carts = await this.cartModel.findOne({uid: cart})
+
+        if(!carts){
+            throw new WsException("Cart does not exist");
+        }
+
+        await this.cartModel.findOneAndUpdate(
+            { uid: cart },
+            {
+                '$set': {
+                    closed: true
+                }
+            }
+        )
+
+        return {
+            message: "Successful",
+            cart: cart,
+            warehouse: carts.warehouse
+        }
+
     }
 
     async createDockyardCart(user: User, payload: CreateDockyardCartDto){
@@ -137,7 +164,9 @@ export class SalesService {
             category: items.category,
             scanned_by: user._id,
             price: categoryPrice[0].value,
-            currency: categoryPrice[0].currency
+            currency: categoryPrice[0].currency,
+            vat: categoryInfo.vat || 0,
+            covidVat: categoryInfo.covidVat || 0
         }
 
         const old_items = carts.items
@@ -170,8 +199,6 @@ export class SalesService {
     async addToDockyardCart(user: User, payload: AddItemsToDockyardCartDto){
 
         const { cart, items } = payload
-
-        console.log(payload)
 
         const carts = await this.dockyardcartModel.findOne({uid: cart})
 
@@ -381,7 +408,8 @@ export class SalesService {
         const carts = await this.cartModel.find({
             // warehouse: {$in: warehouse_},
             warehouse: warehouse,
-            confirmed: false
+            confirmed: false,
+            closed: false
         })
 
         return {
@@ -508,6 +536,8 @@ export class SalesService {
 
         let items = []
         let subtotal = 0
+        let vat = 0
+        let covidVat = 0
 
         categories.map((cat) => {
             let qty = 0
@@ -521,15 +551,26 @@ export class SalesService {
                 }
             })
             if(qty > 0){
+                const vat_ = (price * cat.vat)/100
+                const covidVat_ = (price * cat.covidVat)/100
+
+                vat = vat + vat_
+                covidVat = covidVat + covidVat_
+
                 subtotal = subtotal + price
+
                 items.push({
                     category: cat.name,
                     quantity: qty,
                     price: price,
-                    items: items_
+                    items: items_,
+                    vat: vat_,
+                    covidVat: covidVat_
                 })
             }
         })
+
+        const total = subtotal + covidVat + vat
 
         return {
                 data: {
@@ -542,6 +583,11 @@ export class SalesService {
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items
             }
@@ -567,8 +613,8 @@ export class SalesService {
 
         let items = []
         let subtotal = 0
-        // let vat = 0
-        // let covidVat = 0
+        let vat = 0
+        let covidVat = 0
 
         categories.map((cat) => {
             let qty = 0
@@ -580,14 +626,25 @@ export class SalesService {
                 }
             })
             if(qty > 0){
+                const vat_ = (price * cat.vat)/100
+                const covidVat_ = (price * cat.covidVat)/100
+
+                vat = vat + vat_
+                covidVat = covidVat + covidVat_
+
                 subtotal = subtotal + price
+
                 items.push({
                     category: cat.name,
                     quantity: qty,
                     price: price,
+                    vat: vat_,
+                    covidVat: covidVat_
                 })
             }
         })
+
+        const total = subtotal + covidVat + vat
 
         return {
             data: {
@@ -600,6 +657,11 @@ export class SalesService {
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items,
                 payment_type: cart.payment_type
@@ -684,6 +746,7 @@ export class SalesService {
         const carts = await this.cartModel.find({
             handler: user._id,
             confirmed: false,
+            closed: {'$ne': true},
             warehouse: warehouse
         })
 

@@ -24,6 +24,14 @@ export class CreateCartDto {
 
 }
 
+export class CloseCartDto {
+
+    @ApiProperty()
+    @NotContains(" ")
+    cart: string;
+
+}
+
 export class CreateDockyardCartDto {
     @ApiProperty()
     warehouse: string
