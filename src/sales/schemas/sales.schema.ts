@@ -186,6 +186,9 @@ export class DockyardCart {
     confirmed: boolean;
 
     @Prop()
+    closed: boolean;
+
+    @Prop()
     items: DockItem[];
 
 }
