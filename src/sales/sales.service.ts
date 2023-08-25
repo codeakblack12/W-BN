@@ -64,6 +64,7 @@ export class SalesService {
             uid: generatedCardId,
             handler: user._id,
             warehouse: warehouse,
+            customer_name: payload.customer_name || "" ,
             confirmed: false,
             closed: false,
             counter,
@@ -362,6 +363,7 @@ export class SalesService {
             amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
+            customer_name: payload.customer_name || "N/A",
             payment_type: payment_type,
             cart: {
                 id: carts._id,
@@ -678,6 +680,7 @@ export class SalesService {
             data: {
                 _id: cart._id,
                 uid: cart.uid,
+                customer_name: cart.customer_name || "",
                 merchant: {
                     firstName: handler?.firstName || "N/A",
                     lastName: handler?.lastName || "N/A"
@@ -1002,6 +1005,7 @@ export class SalesService {
             amount: total,
             status: "PENDING",
             customer_contact_info: email,
+            customer_name: payload.customer_name || "N/A",
             payment_type: "ONLINE",
             cart: {
                 id: cart._id,

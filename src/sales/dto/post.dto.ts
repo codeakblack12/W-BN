@@ -22,6 +22,10 @@ export class CreateCartDto {
     @ApiProperty()
     warehouse: string
 
+    @ApiProperty()
+    @IsOptional()
+    customer_name: string
+
 }
 
 export class CloseCartDto {
@@ -61,6 +65,9 @@ export class CheckoutDockyardCartDto {
     @IsOptional()
     email: string
 
+    @IsOptional()
+    customer_name: string
+
 }
 
 export class MomoPaymentDto {
@@ -89,6 +96,10 @@ export class PaystackLinkDto {
     @ApiProperty()
     @NotContains(" ")
     email: string;
+
+    @ApiProperty()
+    @IsOptional()
+    customer_name: string;
 
     @ApiProperty()
     @NotContains(" ")
