@@ -2,7 +2,7 @@ import mongoose, { ObjectId, Types, isObjectIdOrHexString } from 'mongoose';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
-import { Cart, Transaction } from 'src/sales/schemas/sales.schema';
+import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
@@ -21,6 +21,8 @@ export class AdminService {
         private userModel: mongoose.Model<User>,
         @InjectModel(Cart.name)
         private cartModel: mongoose.Model<Cart>,
+        @InjectModel(DockyardCart.name)
+        private dockyardcartModel: mongoose.Model<DockyardCart>,
         @InjectModel(Inventory.name)
         private inventoryModel: mongoose.Model<Inventory>,
         @InjectModel(Category.name)
@@ -435,6 +437,10 @@ export class AdminService {
 
         const { warehouse } = query
 
+        const getWarehouse = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
         // STOCKS
 
         const all_stocks = await this.inventoryModel.find({
@@ -463,11 +469,22 @@ export class AdminService {
             { $match: {
                 status: {$eq: "COMPLETED"},
                 "cart.warehouse": warehouse,
+                "cart.sale_location": "WAREHOUSE",
+            } },
+            {$group: {_id: null, gross_sales:{$sum:"$amount"}}}
+        ])
+
+        const gross_dockyard_sales = await this.transactionModel.aggregate([
+            { $match: {
+                status: {$eq: "COMPLETED"},
+                "cart.warehouse": warehouse,
+                "cart.sale_location": "DOCKYARD",
             } },
             {$group: {_id: null, gross_sales:{$sum:"$amount"}}}
         ])
 
         const total_sales = gross_sales[0]?.gross_sales || 0
+        const total_dock_sales = gross_dockyard_sales[0]?.gross_sales || 0
 
         const aggregate = [
             // {$sort: { "name": 1 }},
@@ -477,7 +494,7 @@ export class AdminService {
                     localField: "name",
                     foreignField: "category",
                     pipeline: [
-                        {   $match: {inStock: false, warehouse: {$regex: warehouse}}}
+                        {   $match: {inStock: false, warehouse: warehouse}}
                     ],
                     as: "items"
                 },
@@ -495,11 +512,44 @@ export class AdminService {
             },
         ]
 
+        const dock_aggregate = [
+            { $match : { confirmed : true, warehouse: warehouse } },
+            {$unwind:"$items"},
+            {$group:{
+                _id:null,
+                itms: {$push : "$items"}
+            }},
+            {$project:{_id:0, all_items: "$itms"}},
+        ]
+
         const items = await this.categoryModel.aggregate(aggregate)
+        const all_dock_items_ = await this.dockyardcartModel.aggregate(dock_aggregate)
+        const all_dock_items = all_dock_items_[0]?.all_items
+
+        let dock_items = []
+        let dock_total_sold = 0
+
+        await items?.map((val) => {
+            let val_total = 0
+            all_dock_items?.filter((dock_val) => {
+                if(dock_val?.category === val?.name){
+                    val_total = val_total + dock_val?.quantity
+                }
+            })
+            dock_total_sold = dock_total_sold + val_total
+            dock_items.push({
+                ...val,
+                sold: val_total
+            })
+        })
+
+        const items_filtered = items.filter((val) => val.sold > 0)
+        const dock_items_filtered = dock_items.filter((val) => val.sold > 0)
 
         return {
             data: {
                 stock: {
+                    currency: getWarehouse.currency,
                     total: all_stocks,
                     total_sold: all_out_of_stock,
                     percentage_sold: all_out_of_stock_percentage || 0,
@@ -507,9 +557,16 @@ export class AdminService {
                     percentage_sold_today: all_sold_today_percentage || 0
                 },
                 sales: {
+                    currency: getWarehouse.currency,
                     total: total_sales,
                     total_sold: all_out_of_stock,
-                    items
+                    items: items_filtered
+                },
+                dockyard_sales: {
+                    currency: getWarehouse.currency,
+                    total: total_dock_sales,
+                    total_sold: dock_total_sold,
+                    items: dock_items_filtered
                 }
             }
         }

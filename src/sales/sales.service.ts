@@ -64,6 +64,7 @@ export class SalesService {
             uid: generatedCardId,
             handler: user._id,
             warehouse: warehouse,
+            customer_name: payload.customer_name || "" ,
             confirmed: false,
             closed: false,
             counter,
@@ -99,6 +100,32 @@ export class SalesService {
 
     }
 
+    async closeDockyardCart(user: User, payload: CloseCartDto){
+        const { cart } = payload
+
+        const carts = await this.dockyardcartModel.findOne({uid: cart})
+
+        if(!carts){
+            throw new WsException("Cart does not exist");
+        }
+
+        await this.dockyardcartModel.findOneAndUpdate(
+            { uid: cart },
+            {
+                '$set': {
+                    closed: true
+                }
+            }
+        )
+
+        return {
+            message: "Successful",
+            cart: cart,
+            warehouse: carts.warehouse
+        }
+
+    }
+
     async createDockyardCart(user: User, payload: CreateDockyardCartDto){
 
         const nanoid = customAlphabet(process.env.ALPHA_CAPS)
@@ -118,6 +145,7 @@ export class SalesService {
             handler: user._id,
             warehouse: payload.warehouse,
             confirmed: false,
+            closed: false,
             items: []
         })
 
@@ -311,7 +339,7 @@ export class SalesService {
 
         const carts = await this.dockyardcartModel.findById(id)
 
-        if( payment_type === "ONLINE" || payment_type === "MOMO"){
+        if( payment_type === "ONLINE"){
             throw new BadRequestException(`Instant confirmation not allowed for ${payment_type} payment`);
         }
 
@@ -335,6 +363,7 @@ export class SalesService {
             amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
+            customer_name: payload.customer_name || "N/A",
             payment_type: payment_type,
             cart: {
                 id: carts._id,
@@ -358,7 +387,7 @@ export class SalesService {
 
         const carts = await this.cartModel.findById(id)
 
-        if( payment_type === "ONLINE" || payment_type === "MOMO"){
+        if( payment_type === "ONLINE"){
             throw new BadRequestException(`Instant confirmation not allowed for ${payment_type} payment`);
         }
 
@@ -409,7 +438,7 @@ export class SalesService {
             // warehouse: {$in: warehouse_},
             warehouse: warehouse,
             confirmed: false,
-            closed: false
+            closed: {'$ne': true},
         })
 
         return {
@@ -424,7 +453,8 @@ export class SalesService {
 
         const carts = await this.dockyardcartModel.find({
             warehouse: warehouse,
-            confirmed: false
+            confirmed: false,
+            closed: {'$ne': true},
         })
 
         const carts_ = await carts.map((cart) => {
@@ -650,6 +680,7 @@ export class SalesService {
             data: {
                 _id: cart._id,
                 uid: cart.uid,
+                customer_name: cart.customer_name || "",
                 merchant: {
                     firstName: handler?.firstName || "N/A",
                     lastName: handler?.lastName || "N/A"
@@ -974,6 +1005,7 @@ export class SalesService {
             amount: total,
             status: "PENDING",
             customer_contact_info: email,
+            customer_name: payload.customer_name || "N/A",
             payment_type: "ONLINE",
             cart: {
                 id: cart._id,

@@ -91,6 +91,21 @@ export class SalesController {
         }
     }
 
+    // Close Dockyard Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('dockyard-cart/close')
+    async closeDockyardCart(@Request() req, @Body(new ValidationPipe()) payload: CloseCartDto){
+        try {
+            const resp = await this.service.closeDockyardCart(req.user, payload)
+            // await this.salesGateway.server.emit(req.user._id, resp.cart)
+            await this.salesGateway.server.emit(`CLOSE-DOCKCART-${resp.warehouse}`, resp.cart);
+            return resp
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
     // Get Dockyard Carts
     @UseGuards(SalesGuard)
     @Get('dockyard-carts/:warehouse')

@@ -1,4 +1,5 @@
 import { Prop,  Schema, SchemaFactory } from "@nestjs/mongoose";
+import { IsOptional } from "class-validator";
 
 
 export enum PAY_METHODS {
@@ -120,6 +121,9 @@ export class Transaction {
     @Prop()
     customer_contact_info: string
 
+    @Prop()
+    customer_name: string
+
 }
 
 @Schema({
@@ -141,6 +145,9 @@ export class Cart {
 
     @Prop()
     warehouse: string;
+
+    @Prop()
+    customer_name: string;
 
     @Prop()
     payment_type: PAY_METHODS;
@@ -186,6 +193,9 @@ export class DockyardCart {
     confirmed: boolean;
 
     @Prop()
+    closed: boolean;
+
+    @Prop()
     items: DockItem[];
 
 }
@@ -197,6 +207,10 @@ export class CreateCart {
 
     @Prop()
     warehouse: string;
+
+    @Prop()
+    @IsOptional()
+    customer_name: string;
 
 }
 
