@@ -171,12 +171,12 @@ export function receiptHeader(){
     `
 }
 
-export function receiptBody(summary, handler, cart, location, barcode, date){
+export function receiptBody(summary, handler, cart, location, barcode, date, transaction){
     return`
         <body>
             <main>
                 ${recieptBodyHeader()}
-                ${receiptDetails(summary, handler, cart, location, date)}
+                ${receiptDetails(summary, handler, cart, location, date, transaction)}
                 ${receiptItemTable(summary?.items, summary?.currency)}
                 ${receiptTotal(summary)}
                 ${Barcode(barcode)}
@@ -197,7 +197,7 @@ function recieptBodyHeader(){
     `
 }
 
-function receiptDetails(summary, handler, cart, location, date){
+function receiptDetails(summary, handler, cart, location, date, transaction){
     return`
         <section style="padding-top: 30px;" class="info-section">
             <div class="">
@@ -210,14 +210,17 @@ function receiptDetails(summary, handler, cart, location, date){
                     <span>Cashier:</span>
                     <span>${handler.firstName} ${handler.lastName}</span>
                 </p>
+                <p class="info">
+					<span>Customer Name:</span>
+					<span>${transaction?.customer_name || "N/A"}</span>
+				</p>
             </div>
             <div class="">
 				<p class="info">
 					<span>Payment Method:</span>
 					<span>${cart.payment_type}</span>
 				</p>
-
-				<p class="info">
+                <p class="info">
 					<span>Sales Location:</span>
 					<span>${location}</span>
 				</p>

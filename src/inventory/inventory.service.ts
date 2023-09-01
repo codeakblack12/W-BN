@@ -108,7 +108,7 @@ export class InventoryService {
                 inStock: true
             })
 
-            return res
+            return {...res.toJSON(), creator_firstname: user.firstName, creator_lastname: user.lastName}
 
         }else{
             // CHECK IF ITEM SCANNED BEFORE
