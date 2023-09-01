@@ -77,7 +77,7 @@ export class AuthService {
 
     async registerUser(payload: RegisterUserDto){
         // Check if user exists
-        const users = await this.userModel.findOne({email: payload.email})
+        const users = await this.userModel.findOne({email: payload.email.toLowerCase()})
         if(users){
             throw new BadRequestException("Email has been used by another user");
         }
@@ -116,6 +116,7 @@ export class AuthService {
 
         const res = await this.userModel.create({
             ...payload,
+            email: payload.email.toLowerCase(),
             password: hashed_password,
             active: false,
             disabled: false
@@ -130,7 +131,7 @@ export class AuthService {
 
     async loginUser(payload: LoginUserDto){
         // Check if user exists
-        const user = await this.userModel.findOne({email: payload.email, disabled: false})
+        const user = await this.userModel.findOne({email: payload.email.toLowerCase(), disabled: false})
         if(!user){
             throw new UnauthorizedException("User does not exist");
         }
@@ -139,6 +140,21 @@ export class AuthService {
 
         if(hashed_password !== user?.password){
             throw new UnauthorizedException("Password incorrect")
+        }
+
+        if(
+            payload.platform === "WEB" &&
+            !user.role.includes(Role.SUPER_ADMIN) && !user.role.includes(Role.ADMIN) && !user.role.includes(Role.MANAGER)
+        ){
+            throw new UnauthorizedException("You cannot access this platform!")
+        }
+
+        if(
+            payload.platform === "DESKTOP" &&
+            !user.role.includes(Role.SUPER_ADMIN) && !user.role.includes(Role.ADMIN) && !user.role.includes(Role.MANAGER) &&
+            !user.role.includes(Role.SALES)
+        ){
+            throw new UnauthorizedException("You cannot access this platform!")
         }
 
         user.password = undefined

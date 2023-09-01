@@ -1109,6 +1109,11 @@ export class SalesService {
 
         const summary = await this.getCheckoutSummary(carts.uid)
         const handler = await this.userModel.findOne({_id: carts.handler})
+        const transaction = await this.transactionModel.findOne({
+            payment_type: summary.data.payment_type,
+            status: "COMPLETED",
+            "cart.uid": summary.data.uid
+        })
 
         let options = { format: 'A5' };
 
@@ -1123,7 +1128,7 @@ export class SalesService {
         let file = await { content: `
             <html lang="en">
                 ${receiptHeader()}
-                ${receiptBody(summary.data, handler, carts, "Warehouse", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'))}
+                ${receiptBody(summary.data, handler, carts, "Warehouse", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'), transaction)}
             </html>
         `};
 
@@ -1142,6 +1147,12 @@ export class SalesService {
 
         const summary = await this.getDockyardCheckoutSummary(carts.uid)
         const handler = await this.userModel.findOne({_id: carts.handler})
+        const transaction = await this.transactionModel.findOne({
+            payment_type: summary.data.payment_type,
+            status: "COMPLETED",
+            "cart.uid": summary.data.uid
+        })
+        .sort({createdAt: -1})
 
         let options = { format: 'A5' };
 
@@ -1156,7 +1167,7 @@ export class SalesService {
         let file = await { content: `
             <html lang="en">
                 ${receiptHeader()}
-                ${receiptBody(summary.data, handler, carts, "Dockyard", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'))}
+                ${receiptBody(summary.data, handler, carts, "Dockyard", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'), transaction)}
             </html>
         `};
 
