@@ -40,6 +40,14 @@ export class GetTransactionDto {
     @ApiProperty()
     warehouse: string;
 
+    @ApiProperty()
+    @IsOptional()
+    from: string;
+
+    @ApiProperty()
+    @IsOptional()
+    to: string;
+
 
 }
 

@@ -172,14 +172,22 @@ export class AdminService {
 
     async getTransactions(
         page: number, limit: number, ref: string, status: string,
-        location: string, warehouse: string
+        location: string, warehouse: string, from: string, to: string
     ){
         const page_ = page || 1
         const limit_ = limit || 10
+        const from_ = from || "1900-01-01"
+        const to_ = to || "2100-01-01"
 
         const query = {
-            "reference": { $regex: ref || "", $options: 'i' },
+            // "reference": { $regex: ref || "", $options: 'i' },
+            "$or": [
+                {"reference": { $regex: ref || "", $options: 'i' }},
+                {"customer_contact_info": { $regex: ref || "", $options: 'i' }},
+                {"customer_name": { $regex: ref || "", $options: 'i' }},
+            ],
             "status": { $regex: status || "" },
+            "createdAt":{$gte:new Date(from_),$lt: new Date(to_)},
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
         }
@@ -190,7 +198,7 @@ export class AdminService {
             data: transactions,
             total: total_transactions,
             pages: number_of_pages,
-            next: Number(page) + 1 > number_of_pages ? "" : Number(page_) + 1
+            next: Number(page_) + 1 > number_of_pages ? "" : Number(page_) + 1
         }
     }
 

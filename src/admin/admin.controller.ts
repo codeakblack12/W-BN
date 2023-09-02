@@ -63,7 +63,7 @@ export class AdminController {
         try {
             return this.service.getTransactions(
                 query.page, query.limit, query.ref, query.status,
-                query.location, query.warehouse
+                query.location, query.warehouse, query.from, query.to
             )
         } catch (error) {
             throw new BadRequestException();
