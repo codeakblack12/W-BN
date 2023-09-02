@@ -1,5 +1,5 @@
 import { Prop,  Schema, SchemaFactory } from "@nestjs/mongoose";
-import mongoose, { ObjectId } from "mongoose";
+import mongoose, { Date, ObjectId } from "mongoose";
 
 export enum Role {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -76,5 +76,28 @@ export class Warehouse {
     active: boolean;
 }
 
+@Schema({
+    timestamps: true
+})
+
+export class Reset {
+
+    _id: string;
+
+    @Prop()
+    user: mongoose.Schema.Types.ObjectId;
+
+    @Prop()
+    token: string;
+
+    @Prop()
+    active: boolean;
+
+    @Prop({type: Date})
+    expireAt: Date;
+
+}
+
 export const UserSchema = SchemaFactory.createForClass(User)
+export const ResetSchema = SchemaFactory.createForClass(Reset)
 export const WarehouseSchema = SchemaFactory.createForClass(Warehouse)

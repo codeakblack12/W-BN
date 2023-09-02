@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { jwtConstants } from './constants';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UserSchema, WarehouseSchema } from './schemas/auth.schema';
+import { ResetSchema, UserSchema, WarehouseSchema } from './schemas/auth.schema';
 import { ConfigModule } from '@nestjs/config';
 import { CountrySchema } from 'src/admin/schemas/admin.schema';
 import { MailModule } from 'src/mail/mail.module';
@@ -20,6 +20,7 @@ import { MailModule } from 'src/mail/mail.module';
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
     MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
     MongooseModule.forFeature([{name: 'Country', schema: CountrySchema}]),
+    MongooseModule.forFeature([{name: 'Reset', schema: ResetSchema}]),
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,

@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, NotFoundException, Post, ValidationPipe, Get, UseGuards } from '@nestjs/common';
-import { CreateWarehouseDto, LoginUserDto, RegisterUserDto } from './dto/post.dto';
+import { ConfirmResetPasswordDto, CreateWarehouseDto, LoginUserDto, RegisterUserDto, ResetPasswordDto } from './dto/post.dto';
 import { AuthService } from './auth.service';
 import { User, Warehouse } from './schemas/auth.schema';
 import { AdminGuard } from 'src/admin/admin.guard';
@@ -48,6 +48,28 @@ export class AuthController {
         try {
             // console.log(payload)
             return this.service.loginUser(payload)
+        } catch (error) {
+            throw new NotFoundException();
+        }
+    }
+
+    // Reset Password
+    @Post('reset-password')
+    resetPassword(@Body(new ValidationPipe()) payload: ResetPasswordDto) {
+        try {
+            // console.log(payload)
+            return this.service.resetPassword(payload)
+        } catch (error) {
+            throw new NotFoundException();
+        }
+    }
+
+    // Confirm Password Reset
+    @Post('confirm-reset')
+    confirmResetPassword(@Body(new ValidationPipe()) payload: ConfirmResetPasswordDto) {
+        try {
+            // console.log(payload)
+            return this.service.confirmResetPassword(payload)
         } catch (error) {
             throw new NotFoundException();
         }
