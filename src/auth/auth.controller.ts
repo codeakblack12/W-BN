@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, NotFoundException, Post, ValidationPipe, Get, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, NotFoundException, Post, ValidationPipe, Get, UseGuards, Request } from '@nestjs/common';
 import { ConfirmResetPasswordDto, CreateWarehouseDto, LoginUserDto, RegisterUserDto, ResetPasswordDto } from './dto/post.dto';
 import { AuthService } from './auth.service';
 import { User, Warehouse } from './schemas/auth.schema';
@@ -34,9 +34,9 @@ export class AuthController {
     // Register User
     @UseGuards(AdminGuard)
     @Post('register')
-    registerUser(@Body(new ValidationPipe()) payload: RegisterUserDto ) {
+    registerUser(@Request() req, @Body(new ValidationPipe()) payload: RegisterUserDto ) {
         try {
-            return this.service.registerUser(payload)
+            return this.service.registerUser(payload, req.user)
         } catch (error) {
             throw new BadRequestException();
         }

@@ -77,12 +77,32 @@ export class AuthService {
 
     // USERS
 
-    async registerUser(payload: RegisterUserDto){
+    async registerUser(payload: RegisterUserDto, user: User){
         // Check if user exists
         const users = await this.userModel.findOne({email: payload.email.toLowerCase()})
         if(users){
             throw new BadRequestException("Email has been used by another user");
         }
+
+        // Creation Hierarchy
+        if(user.role.includes(Role.ADMIN)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+        if(user.role.includes(Role.MANAGER)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN) ||
+                payload.role.includes(Role.MANAGER)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+
 
         // Check permissions
         if(!payload.role.includes(Role.SUPER_ADMIN) && payload.warehouse.length < 1){
@@ -99,6 +119,7 @@ export class AuthService {
         ){
             throw new BadRequestException("User can only be assigned to one warehouse");
         }
+
 
         // Check if warehouse exists
         const warehouses = await this.warehouseModel.find()

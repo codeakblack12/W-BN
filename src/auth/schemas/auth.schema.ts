@@ -47,6 +47,9 @@ export class User {
 
     @Prop()
     disabled: boolean;
+
+    @Prop({type: Date})
+    lastActive: Date;
 }
 
 @Schema({

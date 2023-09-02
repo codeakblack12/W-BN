@@ -27,6 +27,14 @@ export class UsersService {
                 return val.identifier
             })
         }
+
+        await this.userModel.findOneAndUpdate(
+            { 'email': request.email },
+            {'$set': {
+                lastActive: new Date()
+            }}
+        )
+
         return user.toJSON()
     }
 
