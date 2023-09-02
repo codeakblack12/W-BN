@@ -255,7 +255,11 @@ export class AdminService {
             },
             {
                 $match: {
-                    name: {$regex: name, $options: 'i'},
+                    // name: {$regex: name, $options: 'i'},
+                    "$or": [
+                        {"name": { $regex: name || "", $options: 'i' }},
+                        {"code": { $regex: name || "", $options: 'i' }}
+                    ],
                     status: {$regex: status}
                 }
             },
