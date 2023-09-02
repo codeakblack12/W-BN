@@ -484,6 +484,15 @@ export class SalesService {
             throw new BadRequestException("Cart does not exist");
         }
 
+        const handler = await this.userModel.findById(cart.handler)
+
+        const transaction = await this.transactionModel.findOne({
+            payment_type: cart.payment_type,
+            status: "COMPLETED",
+            "cart.uid": cart.uid
+        })
+        .sort({createdAt: -1})
+
         const cart_items = cart.items
 
         let items = cart_items
@@ -508,6 +517,11 @@ export class SalesService {
             data: {
                 _id: cart._id,
                 uid: cart.uid,
+                merchant: {
+                    firstName: handler.firstName,
+                    lastName: handler.lastName
+                },
+                customer_name: transaction.customer_name || "N/A",
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
@@ -607,8 +621,8 @@ export class SalesService {
                 _id: cart._id,
                 uid: cart.uid,
                 merchant: {
-                    firstName: handler.firstName,
-                    lastName: handler.lastName
+                    firstName: handler.firstName || "N/A",
+                    lastName: handler.lastName || "N/A"
                 },
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
