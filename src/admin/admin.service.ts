@@ -287,7 +287,34 @@ export class AdminService {
         const warehouse = query.warehouse || ""
         const name = query.name || ""
 
-        console.log(query)
+        const queryAggregate = [
+            {
+                $match: {
+                    category: category,
+                    warehouse: { $regex: warehouse },
+                    ref: { $regex: name, $options: 'i' },
+                    inStock: true
+                }
+            },
+            {$set: {creator: {$toObjectId: "$creator"} }},
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "creator",
+                    foreignField: "_id",
+                    pipeline: [
+                        {
+                            $project: {
+                                firstName: 1,
+                                lastName: 1
+                            }
+                        }
+                    ],
+                    as: "creator_details"
+                }
+            },
+            {$unwind:"$creator_details"},
+        ]
 
         const find_query = {
             category: category,
@@ -296,7 +323,7 @@ export class AdminService {
             inStock: true
         }
 
-        const inventory = await this.inventoryModel.find(find_query)
+        const inventory = await this.inventoryModel.aggregate(queryAggregate)
         .sort( { "updatedAt": -1 } )
         .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
         .limit(limit)

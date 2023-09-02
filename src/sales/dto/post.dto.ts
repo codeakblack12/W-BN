@@ -12,6 +12,17 @@ export class ObjectIdDto {
 
 }
 
+export class ReceiptDto {
+
+    @ApiProperty()
+    @IsMongoId()
+    _id: ObjectId
+
+    @ApiProperty()
+    @IsOptional()
+    type: string
+}
+
 
 export class CreateCartDto {
 

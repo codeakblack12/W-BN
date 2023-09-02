@@ -1114,7 +1114,7 @@ export class SalesService {
         )
     }
 
-    async generateWareReceipt(id: ObjectId){
+    async generateWareReceipt(id: ObjectId, type: string){
         const carts = await this.cartModel.findById(id)
 
         if(!carts){
@@ -1148,11 +1148,17 @@ export class SalesService {
 
         const output = await generatePdf(file, options)
 
-        return output
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+
+            return base64_output
+        }
 
     }
 
-    async generateDockReceipt(id: ObjectId){
+    async generateDockReceipt(id: ObjectId, type: string){
         const carts = await this.dockyardcartModel.findById(id)
 
         if(!carts){
@@ -1187,9 +1193,13 @@ export class SalesService {
 
         const output = await generatePdf(file, options)
 
-        const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
 
-        return base64_output
+            return base64_output
+        }
 
     }
 }
