@@ -197,11 +197,12 @@ export class AdminController {
     @UseGuards(AdminGuard)
     @Put("user/:_id")
     async userUpdate(
+        @Request() req,
         @Param(new ValidationPipe()) params: ObjectIdDto,
         @Body(new ValidationPipe({whitelist: true})) payload: RegisterUserDto
     ){
         try {
-            return this.service.updateUser(params._id, payload)
+            return this.service.updateUser(params._id, payload, req.user)
         } catch (error) {
             throw new BadRequestException();
         }

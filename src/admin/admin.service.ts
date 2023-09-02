@@ -849,12 +849,31 @@ export class AdminService {
         }
     }
 
-    async updateUser(userId: ObjectId, payload: RegisterUserDto){
+    async updateUser(userId: ObjectId, payload: RegisterUserDto, user: User){
 
-        const user = await this.userModel.findById(userId)
+        const user_ = await this.userModel.findById(userId)
 
-        if(!user){
+        if(!user_){
             throw new UnauthorizedException("User does not exist");
+        }
+
+        // Creation Hierarchy
+        if(user.role.includes(Role.ADMIN)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+        if(user.role.includes(Role.MANAGER)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN) ||
+                payload.role.includes(Role.MANAGER)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
         }
 
         const newData = await this.userModel.findOneAndUpdate(
