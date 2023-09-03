@@ -367,7 +367,7 @@ export class AdminService {
             'SUPER_ADMIN': 'Super Admin',
             'ADMIN': 'Admin',
             'MANAGER': 'Manager',
-            'INVENTORY': 'Inventory Manager',
+            'INVENTORY_MANAGEMENT': 'Inventory Manager',
             'SALES': 'Sales',
             'SECURITY': 'Security'
         }
