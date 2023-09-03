@@ -30,6 +30,7 @@ export class Notification {
     @Prop()
     role: Role[];
 
+    @Prop()
     tag: NotificationTag
 
 }
