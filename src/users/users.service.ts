@@ -5,6 +5,7 @@ import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import * as mongoose from 'mongoose';
 import { ChangePasswordDto, UpdateMeDto } from './dto/post.dto';
 import { hasher } from 'lib/hasher';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class UsersService {
@@ -13,7 +14,8 @@ export class UsersService {
         private userModel: mongoose.Model<User>,
         @InjectModel(Warehouse.name)
         private warehouseModel: mongoose.Model<Warehouse>,
-        private jwtService: JwtService
+        private jwtService: JwtService,
+        private notificationService: NotificationService,
     ) {}
 
     async getMe(request): Promise<User[]> {

@@ -21,7 +21,8 @@ export class AuthController {
         return this.service.getAllWarehouses()
     }
 
-    // Register User
+    // Create Warehouse
+    @UseGuards(AdminGuard)
     @Post('warehouse/create')
     createWarehouse(@Body(new ValidationPipe()) payload: CreateWarehouseDto ) {
         try {

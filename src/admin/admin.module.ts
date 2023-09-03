@@ -9,6 +9,8 @@ import { UserSchema, WarehouseSchema } from 'src/auth/schemas/auth.schema';
 import { CartSchema, DockyardCartSchema, TransactionSchema } from 'src/sales/schemas/sales.schema';
 import { CategorySchema, InventorySchema } from 'src/inventory/schemas/inventory.schema';
 import { CountrySchema } from './schemas/admin.schema';
+import { NotificationModule } from 'src/notification/notification.module';
+import { NotificationSchema } from 'src/notification/schemas/notification.schema';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { CountrySchema } from './schemas/admin.schema';
     }),
     SalesModule,
     AuthModule,
+    NotificationModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
     MongooseModule.forFeature([{name: 'Cart', schema: CartSchema}]),
     MongooseModule.forFeature([{name: 'DockyardCart', schema: DockyardCartSchema}]),
@@ -26,6 +29,7 @@ import { CountrySchema } from './schemas/admin.schema';
     MongooseModule.forFeature([{name: 'Country', schema: CountrySchema}]),
     MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
     MongooseModule.forFeature([{name: 'Transaction', schema: TransactionSchema}]),
+    MongooseModule.forFeature([{name: 'Notification', schema: NotificationSchema}])
   ],
   controllers: [AdminController],
   providers: [AdminService]

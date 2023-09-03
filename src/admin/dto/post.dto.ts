@@ -98,6 +98,15 @@ export class GetUsersDto {
 
 }
 
+export class GetNotificationsDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
+
+}
+
 export class GetTransactionOverviewDto {
     @ApiProperty()
     @IsNotEmpty()

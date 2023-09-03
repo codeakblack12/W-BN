@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
@@ -102,6 +102,16 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
+    @Get('notifications')
+    async getNotifications(@Request() req, @Query(new ValidationPipe()) query: GetNotificationsDto){
+        try {
+            return this.service.getNotifiications(req.user, query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
     @Get('warehouses')
     async getWarehouses(@Query(new ValidationPipe()) query: GetWarehouseDto){
         try {
@@ -142,6 +152,16 @@ export class AdminController {
             return this.service.getInventoryOverview(query)
         } catch (error) {
             throw new BadRequestException();
+        }
+    }
+
+    // @UseGuards(AdminGuard)
+    @Get('daily-report')
+    async getDailyReport(){
+        try {
+            return this.service.handleDailyReport()
+        } catch (error) {
+            throw new BadRequestException(error);
         }
     }
 

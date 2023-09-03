@@ -11,6 +11,8 @@ import * as mongoose from 'mongoose';
 import { jwtConstants } from './constants';
 import { Country } from 'src/admin/schemas/admin.schema';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 
 @Injectable()
@@ -26,6 +28,7 @@ export class AuthService {
         @InjectModel(Reset.name)
         private resetModel: mongoose.Model<Reset>,
         private mailService: MailService,
+        private notificationService: NotificationService,
         private jwtService: JwtService,
     ) {}
 
@@ -68,6 +71,14 @@ export class AuthService {
             ...payload,
             currency: countryExists.currency,
             active: true
+        })
+
+        await this.notificationService.addNotification({
+            title: 'Warehouse Created',
+            description: `${payload.identifier} was just created`,
+            warehouse: [],
+            role: [Role.SUPER_ADMIN],
+            tag: NotificationTag.WAREHOUSE
         })
 
         return {
@@ -147,6 +158,14 @@ export class AuthService {
 
         await this.mailService.sendWelcomeEmail(payload.email, generatedPassword)
 
+        await this.notificationService.addNotification({
+            title: 'New User',
+            description: `${payload.firstName} ${payload.lastName} has been added to the team`,
+            warehouse: payload.warehouse,
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.USER
+        })
+
         return {
             message: "Successful"
         }
@@ -191,6 +210,13 @@ export class AuthService {
                     active: true
                 }}
             )
+            await this.notificationService.addNotification({
+                title: `Account activated`,
+                description: `${user.firstName} ${user.lastName} has activated his/her account.`,
+                warehouse: user.warehouse,
+                role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+                tag: NotificationTag.USER
+            })
         }
 
         const token = {

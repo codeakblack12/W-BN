@@ -6,6 +6,7 @@ import { User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { CreateCategoryDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { WsException } from '@nestjs/websockets';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class InventoryService {
@@ -16,7 +17,9 @@ export class InventoryService {
         @InjectModel(Inventory.name)
         private inventoryModel: mongoose.Model<Inventory>,
         @InjectModel(Warehouse.name)
-        private warehouseModel: mongoose.Model<Warehouse>
+        private warehouseModel: mongoose.Model<Warehouse>,
+
+        private notificationService: NotificationService,
     ) {}
 
     async createCategory(payload: CreateCategoryDto){

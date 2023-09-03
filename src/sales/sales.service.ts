@@ -5,7 +5,7 @@ import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import mongoose, { ObjectId } from 'mongoose';
 import { AddItemsToDockyardCartDto, AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
-import { User, Warehouse } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { BadRequestException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,6 +16,8 @@ import { receiptBody, receiptHeader } from 'src/components/common/functions/temp
 import * as JsBarcode from 'jsbarcode';
 import { Canvas, createCanvas } from 'canvas';
 import * as moment from "moment";
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 const axios = require('axios').default;
 
@@ -37,7 +39,10 @@ export class SalesService {
         private warehouseModel: mongoose.Model<Warehouse>,
         @InjectModel(Transaction.name)
         private transactionModel: mongoose.Model<Transaction>,
+
+        private notificationService: NotificationService,
     ){}
+
 
     async createCart(user: User, payload: CreateCartDto){
         const { counter, warehouse } = payload
@@ -375,6 +380,14 @@ export class SalesService {
 
         await this.transactionModel.create(transaction_payload)
 
+        await this.notificationService.addNotification({
+            title: 'Dockyard Sale',
+            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
+
         return {
             message: 'Successful'
         }
@@ -409,7 +422,7 @@ export class SalesService {
             handler: user._id,
             reference: ref_id,
             currency: summary.data.currency,
-            amount: summary.data.subtotal,
+            amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
             payment_type: payment_type,
@@ -422,6 +435,14 @@ export class SalesService {
         }
 
         await this.transactionModel.create(transaction_payload)
+
+        await this.notificationService.addNotification({
+            title: 'Warehouse Sale',
+            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             message: 'Successful',
@@ -778,6 +799,14 @@ export class SalesService {
             {$set: {security_handler: user._id, security_clearance: true }}
         )
 
+        await this.notificationService.addNotification({
+            title: 'Security Approval',
+            description: `${cart.uid} was approved by ${user.firstName} ${user.lastName} in ${cart.warehouse}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.WAREHOUSE
+        })
+
         return {
             message: "Successful"
         }
@@ -1094,6 +1123,14 @@ export class SalesService {
         }else{
             summary = await this.getDockyardCheckoutSummary(cart.uid)
         }
+
+        await this.notificationService.addNotification({
+            title: `${cart.sale_location} Sale`,
+            description: `ONLINE payment of ${summary.data.currency}${summary.data.total} for ${cart.uid}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             reference: data.reference,
