@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
@@ -63,7 +63,7 @@ export class AdminController {
         try {
             return this.service.getTransactions(
                 query.page, query.limit, query.ref, query.status,
-                query.location, query.warehouse
+                query.location, query.warehouse, query.from, query.to
             )
         } catch (error) {
             throw new BadRequestException();
@@ -96,6 +96,16 @@ export class AdminController {
     async getUsers(@Query(new ValidationPipe()) query: GetUsersDto){
         try {
             return this.service.getUsers(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Get('notifications')
+    async getNotifications(@Request() req, @Query(new ValidationPipe()) query: GetNotificationsDto){
+        try {
+            return this.service.getNotifiications(req.user, query)
         } catch (error) {
             throw new BadRequestException();
         }
@@ -142,6 +152,16 @@ export class AdminController {
             return this.service.getInventoryOverview(query)
         } catch (error) {
             throw new BadRequestException();
+        }
+    }
+
+    // @UseGuards(AdminGuard)
+    @Get('daily-report')
+    async getDailyReport(){
+        try {
+            return this.service.handleDailyReport()
+        } catch (error) {
+            throw new BadRequestException(error);
         }
     }
 
@@ -197,11 +217,12 @@ export class AdminController {
     @UseGuards(AdminGuard)
     @Put("user/:_id")
     async userUpdate(
+        @Request() req,
         @Param(new ValidationPipe()) params: ObjectIdDto,
         @Body(new ValidationPipe({whitelist: true})) payload: RegisterUserDto
     ){
         try {
-            return this.service.updateUser(params._id, payload)
+            return this.service.updateUser(params._id, payload, req.user)
         } catch (error) {
             throw new BadRequestException();
         }

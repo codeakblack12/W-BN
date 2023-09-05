@@ -16,4 +16,16 @@ export class MailService {
             }
         })
     }
+
+    async sendPasswordResetEmail(email: string, name: string, link: string){
+        await this.mailerService.sendMail({
+            to: email,
+            subject: "Reset Wusuaa Password",
+            template: "./resetpassword",
+            context: {
+                name: name,
+                link: link
+            }
+        })
+    }
 }

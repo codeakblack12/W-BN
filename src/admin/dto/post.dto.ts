@@ -40,6 +40,14 @@ export class GetTransactionDto {
     @ApiProperty()
     warehouse: string;
 
+    @ApiProperty()
+    @IsOptional()
+    from: string;
+
+    @ApiProperty()
+    @IsOptional()
+    to: string;
+
 
 }
 
@@ -87,6 +95,15 @@ export class GetUsersDto {
 
     @ApiProperty()
     warehouse: string;
+
+}
+
+export class GetNotificationsDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
 
 }
 

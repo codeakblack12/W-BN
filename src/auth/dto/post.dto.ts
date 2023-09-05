@@ -42,6 +42,21 @@ export class LoginUserDto {
     platform: Platform;
 }
 
+export class ResetPasswordDto {
+    @ApiProperty()
+    @IsEmail()
+    email: string;
+}
+
+export class ConfirmResetPasswordDto {
+    @ApiProperty()
+    @MinLength(8)
+    password: string;
+
+    @ApiProperty()
+    token: string;
+}
+
 export class CreateWarehouseDto {
     @ApiProperty()
     @IsNotEmpty()

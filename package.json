@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^10.1.0",
     "@nestjs/platform-socket.io": "^10.1.0",
     "@nestjs/platform-ws": "^10.1.0",
+    "@nestjs/schedule": "^3.0.3",
     "@nestjs/swagger": "^7.1.2",
     "@nestjs/websockets": "^10.1.0",
     "@saemhco/nestjs-html-pdf": "^0.1.0",

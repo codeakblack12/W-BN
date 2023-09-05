@@ -9,6 +9,8 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { MailModule } from './mail/mail.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -16,6 +18,7 @@ import { MailModule } from './mail/mail.module';
       envFilePath: '.env',
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(process.env.DB_URI),
     AuthModule,
     InventoryModule,
@@ -23,6 +26,7 @@ import { MailModule } from './mail/mail.module';
     AdminModule,
     UsersModule,
     MailModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,11 +1,11 @@
 import mongoose, { ObjectId, Types, isObjectIdOrHexString } from 'mongoose';
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -13,6 +13,9 @@ import moment from 'moment';
 import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
 import { generatePdf } from "html-pdf-node"
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
+import { Cron } from '@nestjs/schedule';
+import { NotificationService } from 'src/notification/notification.service';
+import { Notification, NotificationTag } from 'src/notification/schemas/notification.schema';
 
 @Injectable()
 export class AdminService {
@@ -25,6 +28,8 @@ export class AdminService {
         private dockyardcartModel: mongoose.Model<DockyardCart>,
         @InjectModel(Inventory.name)
         private inventoryModel: mongoose.Model<Inventory>,
+        @InjectModel(Notification.name)
+        private notificationModel: mongoose.Model<Notification>,
         @InjectModel(Category.name)
         private categoryModel: mongoose.Model<Category>,
         @InjectModel(Country.name)
@@ -33,6 +38,10 @@ export class AdminService {
         private transactionModel: mongoose.Model<Transaction>,
         @InjectModel(Warehouse.name)
         private warehouseModel: mongoose.Model<Warehouse>,
+
+        private notificationService: NotificationService,
+
+        // private readonly logger = new Logger(AdminService.name)
 
     ){}
 
@@ -99,9 +108,23 @@ export class AdminService {
             covidVat: payload.covidVat
         })
 
+        const warehouses = await this.warehouseModel.find()
+        const warehouseArr = warehouses.map((val) => {
+            return val.identifier
+        })
+
+        await this.notificationService.addNotification({
+            title: 'Category Created',
+            description: `${name} was just created`,
+            warehouse: warehouseArr,
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.USER
+        })
+
         return {
             message: "Successful"
         }
+
     }
 
 
@@ -172,25 +195,37 @@ export class AdminService {
 
     async getTransactions(
         page: number, limit: number, ref: string, status: string,
-        location: string, warehouse: string
+        location: string, warehouse: string, from: string, to: string
     ){
         const page_ = page || 1
         const limit_ = limit || 10
+        const from_ = from || "1900-01-01"
+        const to_ = to || "2100-01-01"
 
         const query = {
-            "reference": { $regex: ref || "", $options: 'i' },
+            // "reference": { $regex: ref || "", $options: 'i' },
+            "$or": [
+                {"reference": { $regex: ref || "", $options: 'i' }},
+                {"customer_contact_info": { $regex: ref || "", $options: 'i' }},
+                {"customer_name": { $regex: ref || "", $options: 'i' }},
+            ],
             "status": { $regex: status || "" },
+            "createdAt":{$gte:new Date(from_),$lt: new Date(to_)},
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
         }
-        const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).skip(Number(page_) > 0 ? (Number(page_) - 1) * Number(limit_) : 0).limit(limit_)
+        const transactions = await this.transactionModel
+        .find(query)
+        .sort( { "updatedAt": -1 } )
+        .skip(Number(page_) > 0 ? (Number(page_) - 1) * Number(limit_) : 0)
+        .limit(limit_)
         const total_transactions = await this.transactionModel.find(query).count()
         const number_of_pages = Math.ceil(total_transactions / Number(limit_))
         return {
             data: transactions,
             total: total_transactions,
             pages: number_of_pages,
-            next: Number(page) + 1 > number_of_pages ? "" : Number(page_) + 1
+            next: Number(page_) + 1 > number_of_pages ? "" : Number(page_) + 1
         }
     }
 
@@ -247,7 +282,11 @@ export class AdminService {
             },
             {
                 $match: {
-                    name: {$regex: name, $options: 'i'},
+                    // name: {$regex: name, $options: 'i'},
+                    "$or": [
+                        {"name": { $regex: name || "", $options: 'i' }},
+                        {"code": { $regex: name || "", $options: 'i' }}
+                    ],
                     status: {$regex: status}
                 }
             },
@@ -275,7 +314,34 @@ export class AdminService {
         const warehouse = query.warehouse || ""
         const name = query.name || ""
 
-        console.log(query)
+        const queryAggregate = [
+            {
+                $match: {
+                    category: category,
+                    warehouse: { $regex: warehouse },
+                    ref: { $regex: name, $options: 'i' },
+                    inStock: true
+                }
+            },
+            {$set: {creator: {$toObjectId: "$creator"} }},
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "creator",
+                    foreignField: "_id",
+                    pipeline: [
+                        {
+                            $project: {
+                                firstName: 1,
+                                lastName: 1
+                            }
+                        }
+                    ],
+                    as: "creator_details"
+                }
+            },
+            {$unwind:"$creator_details"},
+        ]
 
         const find_query = {
             category: category,
@@ -284,7 +350,7 @@ export class AdminService {
             inStock: true
         }
 
-        const inventory = await this.inventoryModel.find(find_query)
+        const inventory = await this.inventoryModel.aggregate(queryAggregate)
         .sort( { "updatedAt": -1 } )
         .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
         .limit(limit)
@@ -305,7 +371,7 @@ export class AdminService {
             'SUPER_ADMIN': 'Super Admin',
             'ADMIN': 'Admin',
             'MANAGER': 'Manager',
-            'INVENTORY': 'Inventory Manager',
+            'INVENTORY_MANAGEMENT': 'Inventory Manager',
             'SALES': 'Sales',
             'SECURITY': 'Security'
         }
@@ -551,6 +617,7 @@ export class AdminService {
                 stock: {
                     currency: getWarehouse.currency,
                     total: all_stocks,
+                    total_remaining: all_stocks - all_out_of_stock,
                     total_sold: all_out_of_stock,
                     percentage_sold: all_out_of_stock_percentage || 0,
                     total_sold_today: all_stocks_sold_today,
@@ -689,6 +756,35 @@ export class AdminService {
         return output
     }
 
+    async getNotifiications( user: User, query: GetNotificationsDto){
+        const page = Number(query.page) || 1
+        const limit = Number(query.limit) || 10
+
+        let find_query = {}
+
+        if(!user.role.includes(Role.SUPER_ADMIN)){
+            find_query = {
+                warhouse: { "$in": user.warehouse },
+                role: {"$in": user.role},
+            }
+        }
+
+        const notifications = await this.notificationModel.find(find_query,{warehouse: 0, role: 0})
+        .sort( { "createdAt": -1 } )
+        .skip(Number(page) > 0 ? (Number(page) - 1) * Number(limit) : 0)
+        .limit(limit)
+
+        const total_notifications = await this.notificationModel.find(find_query).count()
+        const number_of_pages = Math.ceil(total_notifications / Number(limit))
+
+        return {
+            data: notifications,
+            total: total_notifications,
+            pages: number_of_pages,
+            next: page + 1 > number_of_pages ? "" : Number(page) + 1
+        }
+    }
+
 
     // UPDATE SERVICES
     async toggleWarehouse(warehouse: ObjectId, status: boolean){
@@ -810,12 +906,31 @@ export class AdminService {
         }
     }
 
-    async updateUser(userId: ObjectId, payload: RegisterUserDto){
+    async updateUser(userId: ObjectId, payload: RegisterUserDto, user: User){
 
-        const user = await this.userModel.findById(userId)
+        const user_ = await this.userModel.findById(userId)
 
-        if(!user){
+        if(!user_){
             throw new UnauthorizedException("User does not exist");
+        }
+
+        // Creation Hierarchy
+        if(user.role.includes(Role.ADMIN)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+        if(user.role.includes(Role.MANAGER)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN) ||
+                payload.role.includes(Role.MANAGER)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
         }
 
         const newData = await this.userModel.findOneAndUpdate(
@@ -829,6 +944,70 @@ export class AdminService {
             ...payload,
             _id: userId
         }
+    }
+
+
+    // CRON JOBS
+    // @Cron('45 * * * * *')
+    async handleDailyReport() {
+        var today_start = new Date();
+        today_start.setHours(0,0,0,0);
+
+        var today_end = new Date();
+        today_end.setHours(23,59,59,999);
+
+        const aggregate = [
+            // New Users
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "users"
+                },
+            },
+            // Inventories added
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "stocks"
+                },
+            },
+
+            // Add Fields
+            { $addFields: {
+                newUsers: {$size: "$users"},
+            }},
+            { $addFields: {
+                newStock: {$size: "$stocks"},
+            }},
+
+            // Remove Unnecessary Fields
+            {
+                $project: {
+                    users: 0,
+                    stocks: 0
+                }
+            },
+        ]
+
+        const warehouses = await this.warehouseModel.aggregate(aggregate)
+
+        return warehouses
     }
 
 }

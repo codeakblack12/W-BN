@@ -5,7 +5,7 @@ import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import mongoose, { ObjectId } from 'mongoose';
 import { AddItemsToDockyardCartDto, AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
-import { User, Warehouse } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { BadRequestException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,6 +16,8 @@ import { receiptBody, receiptHeader } from 'src/components/common/functions/temp
 import * as JsBarcode from 'jsbarcode';
 import { Canvas, createCanvas } from 'canvas';
 import * as moment from "moment";
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 const axios = require('axios').default;
 
@@ -37,7 +39,10 @@ export class SalesService {
         private warehouseModel: mongoose.Model<Warehouse>,
         @InjectModel(Transaction.name)
         private transactionModel: mongoose.Model<Transaction>,
+
+        private notificationService: NotificationService,
     ){}
+
 
     async createCart(user: User, payload: CreateCartDto){
         const { counter, warehouse } = payload
@@ -375,6 +380,14 @@ export class SalesService {
 
         await this.transactionModel.create(transaction_payload)
 
+        await this.notificationService.addNotification({
+            title: 'Dockyard Sale',
+            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
+
         return {
             message: 'Successful'
         }
@@ -409,7 +422,7 @@ export class SalesService {
             handler: user._id,
             reference: ref_id,
             currency: summary.data.currency,
-            amount: summary.data.subtotal,
+            amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
             payment_type: payment_type,
@@ -422,6 +435,14 @@ export class SalesService {
         }
 
         await this.transactionModel.create(transaction_payload)
+
+        await this.notificationService.addNotification({
+            title: 'Warehouse Sale',
+            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             message: 'Successful',
@@ -484,6 +505,15 @@ export class SalesService {
             throw new BadRequestException("Cart does not exist");
         }
 
+        const handler = await this.userModel.findById(cart.handler)
+
+        const transaction = await this.transactionModel.findOne({
+            payment_type: cart.payment_type,
+            status: "COMPLETED",
+            "cart.uid": cart.uid
+        })
+        .sort({createdAt: -1})
+
         const cart_items = cart.items
 
         let items = cart_items
@@ -508,6 +538,11 @@ export class SalesService {
             data: {
                 _id: cart._id,
                 uid: cart.uid,
+                merchant: {
+                    firstName: handler.firstName,
+                    lastName: handler.lastName
+                },
+                customer_name: transaction.customer_name || "N/A",
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
@@ -607,8 +642,8 @@ export class SalesService {
                 _id: cart._id,
                 uid: cart.uid,
                 merchant: {
-                    firstName: handler.firstName,
-                    lastName: handler.lastName
+                    firstName: handler.firstName || "N/A",
+                    lastName: handler.lastName || "N/A"
                 },
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
@@ -763,6 +798,14 @@ export class SalesService {
             {_id: id},
             {$set: {security_handler: user._id, security_clearance: true }}
         )
+
+        await this.notificationService.addNotification({
+            title: 'Security Approval',
+            description: `${cart.uid} was approved by ${user.firstName} ${user.lastName} in ${cart.warehouse}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.WAREHOUSE
+        })
 
         return {
             message: "Successful"
@@ -1081,6 +1124,14 @@ export class SalesService {
             summary = await this.getDockyardCheckoutSummary(cart.uid)
         }
 
+        await this.notificationService.addNotification({
+            title: `${cart.sale_location} Sale`,
+            description: `ONLINE payment of ${summary.data.currency}${summary.data.total} for ${cart.uid}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
+
         return {
             reference: data.reference,
             status: "SUCCESSFUL",
@@ -1100,7 +1151,7 @@ export class SalesService {
         )
     }
 
-    async generateWareReceipt(id: ObjectId){
+    async generateWareReceipt(id: ObjectId, type: string){
         const carts = await this.cartModel.findById(id)
 
         if(!carts){
@@ -1134,11 +1185,17 @@ export class SalesService {
 
         const output = await generatePdf(file, options)
 
-        return output
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+
+            return base64_output
+        }
 
     }
 
-    async generateDockReceipt(id: ObjectId){
+    async generateDockReceipt(id: ObjectId, type: string){
         const carts = await this.dockyardcartModel.findById(id)
 
         if(!carts){
@@ -1173,9 +1230,13 @@ export class SalesService {
 
         const output = await generatePdf(file, options)
 
-        const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
 
-        return base64_output
+            return base64_output
+        }
 
     }
 }

@@ -3,7 +3,7 @@ import { SalesService } from './sales.service';
 import { SalesGuard } from './sales.guard';
 import { ObjectId } from 'mongoose';
 import { SalesGateway } from './sales.gateway';
-import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto, ReceiptDto } from './dto/post.dto';
 
 @Controller('sales')
 export class SalesController {
@@ -219,12 +219,17 @@ export class SalesController {
     // Generate Warehouse Receipt
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
-    @Get('generate-warehouse-receipt/:_id')
-    async generateWareReceipt(@Request() req, @Param() params: ObjectIdDto){
+    @Get('generate-warehouse-receipt/:_id/:type?')
+    async generateWareReceipt(@Request() req, @Param() params: ReceiptDto){
         try {
-            const file = await this.service.generateWareReceipt(params._id)
-            // return new StreamableFile(file)
-            return file
+            const file = await this.service.generateWareReceipt(params._id, params.type)
+
+            if(params.type === "file"){
+                return new StreamableFile(file)
+            }else{
+                return file
+            }
+
         } catch (error) {
             throw new BadRequestException(error)
         }
@@ -233,10 +238,18 @@ export class SalesController {
     // Generate Dockyard Receipt
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
-    @Get('generate-dockyard-receipt/:_id')
-    async generateDockReceipt(@Request() req, @Param() params: ObjectIdDto){
-        const file = await this.service.generateDockReceipt(params._id)
-        return file
+    @Get('generate-dockyard-receipt/:_id/:type?')
+    async generateDockReceipt(@Request() req, @Param() params: ReceiptDto){
+        try {
+            const file = await this.service.generateDockReceipt(params._id, params.type)
+            if(params.type === "file"){
+                return new StreamableFile(file)
+            }else{
+                return file
+            }
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
     }
 
 }

@@ -1,16 +1,18 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import { LoginUserDto, RegisterUserDto, CreateWarehouseDto  } from './dto/post.dto';
+import { LoginUserDto, RegisterUserDto, CreateWarehouseDto, ResetPasswordDto, ConfirmResetPasswordDto  } from './dto/post.dto';
 import { JwtService } from '@nestjs/jwt'
 import { customAlphabet } from 'nanoid';
 import { hasher } from 'lib/hasher';
 import { v4 as uuidv4 } from 'uuid';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role, User, Warehouse } from './schemas/auth.schema';
+import { Reset, Role, User, Warehouse } from './schemas/auth.schema';
 import * as mongoose from 'mongoose';
 import { jwtConstants } from './constants';
 import { Country } from 'src/admin/schemas/admin.schema';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 
 @Injectable()
@@ -23,7 +25,10 @@ export class AuthService {
         private warehouseModel: mongoose.Model<Warehouse>,
         @InjectModel(Country.name)
         private countryModel: mongoose.Model<Country>,
+        @InjectModel(Reset.name)
+        private resetModel: mongoose.Model<Reset>,
         private mailService: MailService,
+        private notificationService: NotificationService,
         private jwtService: JwtService,
     ) {}
 
@@ -68,6 +73,14 @@ export class AuthService {
             active: true
         })
 
+        await this.notificationService.addNotification({
+            title: 'Warehouse Created',
+            description: `${payload.identifier} was just created`,
+            warehouse: [],
+            role: [Role.SUPER_ADMIN],
+            tag: NotificationTag.WAREHOUSE
+        })
+
         return {
             message: "Successful"
         }
@@ -75,12 +88,32 @@ export class AuthService {
 
     // USERS
 
-    async registerUser(payload: RegisterUserDto){
+    async registerUser(payload: RegisterUserDto, user: User){
         // Check if user exists
         const users = await this.userModel.findOne({email: payload.email.toLowerCase()})
         if(users){
             throw new BadRequestException("Email has been used by another user");
         }
+
+        // Creation Hierarchy
+        if(user.role.includes(Role.ADMIN)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+        if(user.role.includes(Role.MANAGER)){
+            if(
+                payload.role.includes(Role.SUPER_ADMIN) ||
+                payload.role.includes(Role.ADMIN) ||
+                payload.role.includes(Role.MANAGER)
+            ){
+                throw new UnauthorizedException("Not authorized to create this user")
+            }
+        }
+
 
         // Check permissions
         if(!payload.role.includes(Role.SUPER_ADMIN) && payload.warehouse.length < 1){
@@ -97,6 +130,7 @@ export class AuthService {
         ){
             throw new BadRequestException("User can only be assigned to one warehouse");
         }
+
 
         // Check if warehouse exists
         const warehouses = await this.warehouseModel.find()
@@ -123,6 +157,14 @@ export class AuthService {
         })
 
         await this.mailService.sendWelcomeEmail(payload.email, generatedPassword)
+
+        await this.notificationService.addNotification({
+            title: 'New User',
+            description: `${payload.firstName} ${payload.lastName} has been added to the team`,
+            warehouse: payload.warehouse,
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.USER
+        })
 
         return {
             message: "Successful"
@@ -168,6 +210,13 @@ export class AuthService {
                     active: true
                 }}
             )
+            await this.notificationService.addNotification({
+                title: `Account activated`,
+                description: `${user.firstName} ${user.lastName} has activated his/her account.`,
+                warehouse: user.warehouse,
+                role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+                tag: NotificationTag.USER
+            })
         }
 
         const token = {
@@ -178,6 +227,74 @@ export class AuthService {
         return {
             access_token: await this.jwtService.signAsync(token)
         }
+    }
+
+    async resetPassword(payload: ResetPasswordDto){
+
+        const MAX_DAYS = 1
+
+        const user = await this.userModel.findOne({email: payload.email.toLowerCase(), disabled: false})
+
+        if(!user){
+            throw new UnauthorizedException("User does not exist");
+        }
+
+        // Create a Password Reset Document with the users Id
+        const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz012345789')
+        const generatedToken = nanoid(15);
+
+        await this.resetModel.create({
+            user: user._id,
+            token: generatedToken,
+            active: true,
+            expireAt: new Date(Date.now() + MAX_DAYS * 24 * 60 * 60 * 1000)
+        })
+
+        await this.mailService.sendPasswordResetEmail(
+            payload.email,
+            user.firstName,
+            `${process.env.WUSUAA_BASE_URL}/auth/reset-password?token=${generatedToken}`
+        )
+
+        return {
+            message: "Successful"
+        }
+
+    }
+
+    async confirmResetPassword(payload: ConfirmResetPasswordDto){
+
+        // Get Token if exists and is valid
+        const resetToken = await this.resetModel.findOne({
+            token: payload.token,
+            active: true,
+            expireAt: { $gt: new Date() }
+        })
+
+        if(!resetToken){
+            throw new UnauthorizedException("Invalid reset token");
+        }
+
+        const hashed_password = await hasher(payload.password)
+
+        await this.userModel.findOneAndUpdate(
+            { '_id': resetToken.user },
+            {
+                '$set': {password: hashed_password }
+            }
+        )
+
+        await this.resetModel.findOneAndUpdate(
+            { '_id': resetToken._id },
+            {
+                '$set': {active: false }
+            }
+        )
+
+        return {
+            message: "Successful"
+        }
+
     }
 
     // Authorization
