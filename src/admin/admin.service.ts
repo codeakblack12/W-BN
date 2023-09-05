@@ -214,7 +214,11 @@ export class AdminService {
             "cart.sale_location": {$regex: location || ""},
             "cart.warehouse": {$regex: warehouse || ""},
         }
-        const transactions = await this.transactionModel.find(query).sort( { "updatedAt": -1 } ).skip(Number(page_) > 0 ? (Number(page_) - 1) * Number(limit_) : 0).limit(limit_)
+        const transactions = await this.transactionModel
+        .find(query)
+        .sort( { "updatedAt": -1 } )
+        .skip(Number(page_) > 0 ? (Number(page_) - 1) * Number(limit_) : 0)
+        .limit(limit_)
         const total_transactions = await this.transactionModel.find(query).count()
         const number_of_pages = Math.ceil(total_transactions / Number(limit_))
         return {
@@ -613,6 +617,7 @@ export class AdminService {
                 stock: {
                     currency: getWarehouse.currency,
                     total: all_stocks,
+                    total_remaining: all_stocks - all_out_of_stock,
                     total_sold: all_out_of_stock,
                     percentage_sold: all_out_of_stock_percentage || 0,
                     total_sold_today: all_stocks_sold_today,
