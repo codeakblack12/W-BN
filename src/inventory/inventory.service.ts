@@ -129,4 +129,22 @@ export class InventoryService {
 
     }
 
+    async removeManyInStock(id: string){
+
+        const category = await this.categoryModel.findById(id)
+
+        if(!category){
+            throw new BadRequestException("Category does not exist")
+        }
+
+        // await this.inventoryModel.deleteMany({
+        //     category: category.name,
+        //     inStock: true
+        // })
+
+        return {
+            message: "Successful"
+        }
+    }
+
 }

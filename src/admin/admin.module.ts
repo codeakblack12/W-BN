@@ -11,6 +11,7 @@ import { CategorySchema, InventorySchema } from 'src/inventory/schemas/inventory
 import { CountrySchema } from './schemas/admin.schema';
 import { NotificationModule } from 'src/notification/notification.module';
 import { NotificationSchema } from 'src/notification/schemas/notification.schema';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { NotificationSchema } from 'src/notification/schemas/notification.schema
     }),
     SalesModule,
     AuthModule,
+    MailModule,
     NotificationModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
     MongooseModule.forFeature([{name: 'Cart', schema: CartSchema}]),

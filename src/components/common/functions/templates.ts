@@ -2,6 +2,206 @@ import * as JsBarcode from 'jsbarcode';
 import { formatMoney } from './common';
 import moment from 'moment';
 
+// DAILY REPORT
+
+export function dailyReportHead(date){
+    return `
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.cdnfonts.com/css/satoshi" rel="stylesheet">
+            </link>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                }
+                .page {
+                    page-break-before: always;
+                }
+            </style>
+            <title>Report</title>
+            <header style="padding: 22px 20px; width: 100%;
+            align-items: center;
+            background: #222B44;">
+                <h1 style="color: #FFF;
+                font-size: 20px;
+                font-weight: 900;">DAILY REPORT FOR ${date?.toUpperCase()}</h1>
+            </header>
+        </head>
+    `
+}
+
+export function dailyReportBody(warehouse){
+    return `
+        <body style="font-family: 'Satoshi', sans-serif; margin: 0; padding: 0; color: #333; 	font-style: normal; line-height: normal;
+        ">
+            ${dailyReportBodyHeader(warehouse)}
+            <main>
+                ${dailyReportInventorySection(warehouse)}
+                ${dailyReportTransactionsSection(warehouse)}
+                ${dailyReportUsersSection(warehouse)}
+            </main>
+        </body>
+    `
+}
+
+function dailyReportBodyHeader(warehouse){
+    return `
+        <h2 style="padding: 16px 20px; width: 100%; background: #fff;
+        font-size: 16px;
+        font-weight: 900;">
+            WAREHOUSE ${warehouse?.name?.toUpperCase()}
+        </h2>
+    `
+}
+
+function dailyReportInventorySection(warehouse){
+    return `
+        <section>
+            <h3 style="padding: 16px 20px; background: #EDF3FE; color: #5795F7;
+            font-size: 14px;
+            font-weight: 700;">
+                    INVENTORY
+            </h3>
+            <!-- Stock section -->
+			<div class="">
+				<div style="padding: 16px 20px; background: #F8F9FC; color: rgba(51, 51, 51, 0.50);
+				font-size: 14px;
+				font-weight: 700; display: flex; justify-content: space-between;">
+					<p style="font-size: 12px;
+					font-weight: 500; width: 50%;">
+						Stock Added
+					</p>
+					<p style="font-size: 12px;
+					font-weight: 500; width: 50%;">
+						${warehouse?.addedStock}
+					</p>
+
+				</div>
+				<table style=" width: 100%; padding: 0; border-collapse: collapse; font-size: 12px; font-weight: 500;">
+                    ${
+                        warehouse?.categoryInfo?.map((val, index) => {
+                            return `<tr>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="40">${index + 1}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="212">${val?.category}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${val?.added}</td>
+                            </tr>`
+                        }).join("")
+                    }
+				</table>
+			</div>
+
+			<!-- Stock Sold section -->
+			<div class="">
+				<div style="padding: 16px 20px; background: #F8F9FC; color: rgba(51, 51, 51, 0.50);
+						font-size: 14px;
+						font-weight: 700;">
+					<p style="font-size: 12px;
+							font-weight: 500; width: 50%;">
+						Stock Sold
+					</p>
+				</div>
+				<table style=" width: 100%; padding: 0; border-collapse: collapse; font-size: 12px; font-weight: 500;">
+                    ${
+                        warehouse?.categoryInfo?.map((val, index) => {
+                            return `<tr>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="40">${index + 1}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="212">${val?.category}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${val?.sold}</td>
+                            </tr>`
+                        }).join("")
+                    }
+				</table>
+			</div>
+        </section>
+    `
+}
+
+function dailyReportTransactionsSection(warehouse){
+    return `
+        <section>
+            <h3 style="padding: 16px 20px; background: #EDF3FE; color: #5795F7;
+            font-size: 14px;
+            font-weight: 700;">
+                TRANSACTIONS
+            </h3>
+            <!-- Dockyard Sales section -->
+			<div class="">
+				<div style="padding: 16px 20px; background: #F8F9FC; color: rgba(51, 51, 51, 0.50);
+				font-size: 14px;
+				font-weight: 700;">
+					<p style="font-size: 12px;
+					font-weight: 500; width: 50%;">
+						Dockyard Sales
+					</p>
+				</div>
+				<table style=" width: 100%; padding: 0; border-collapse: collapse; font-size: 12px; font-weight: 500;">
+                    ${
+                        warehouse?.categoryInfo?.map((val, index) => {
+                            return `<tr>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="40">${index + 1}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="212">${val?.category}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${formatMoney(val?.dock_total, warehouse?.currency)}</td>
+                            </tr>`
+                        }).join("")
+                    }
+				</table>
+			</div>
+
+			<!-- Warehouse Sold section -->
+			<div class="">
+				<div style="padding: 16px 20px; background: #F8F9FC; color: rgba(51, 51, 51, 0.50);
+				font-size: 14px;
+				font-weight: 700;">
+					<p style="font-size: 12px;
+					font-weight: 500; width: 50%;">
+						Warehouse Sales
+					</p>
+				</div>
+				<table style=" width: 100%; padding: 0; border-collapse: collapse; font-size: 12px; font-weight: 500;">
+                    ${
+                        warehouse?.categoryInfo?.map((val, index) => {
+                            return `<tr>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="40">${index + 1}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="212">${val?.category}</td>
+                                <td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${formatMoney(val?.ware_total, warehouse?.currency)}</td>
+                            </tr>`
+                        }).join("")
+                    }
+				</table>
+			</div>
+        </section>
+    `
+}
+
+function dailyReportUsersSection(warehouse){
+    return `
+        <section>
+            <h3 style="padding: 16px 20px; background: #EDF3FE; color: #5795F7;
+            font-size: 14px;
+            font-weight: 700;">
+                USER MANAGEMENT
+            </h3>
+            <!-- User section -->
+			<div class="">
+				<table style=" width: 100%; padding: 0; border-collapse: collapse; font-size: 12px; font-weight: 500;">
+					<tr>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="40">1</td>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; " width="212">New Users/Staff</td>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${warehouse?.newUsers}</td>
+					</tr>
+					<tr>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">2</td>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">Updated Users/Staff</td>
+						<td style="padding: 16px 12px; border: 1px solid #E1E6EF; ">${warehouse?.updatedUsers}</td>
+					</tr>
+				</table>
+			</div>
+        </section>
+    `
+}
+
 export function receiptHeader(){
     return `
         <head>

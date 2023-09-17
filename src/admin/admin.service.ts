@@ -9,13 +9,15 @@ import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDt
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
-import moment from 'moment';
+import * as moment from "moment";
 import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
 import { generatePdf } from "html-pdf-node"
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationService } from 'src/notification/notification.service';
 import { Notification, NotificationTag } from 'src/notification/schemas/notification.schema';
+import { dailyReportBody, dailyReportHead } from 'src/components/common/functions/templates';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AdminService {
@@ -40,6 +42,7 @@ export class AdminService {
         private warehouseModel: mongoose.Model<Warehouse>,
 
         private notificationService: NotificationService,
+        private mailService: MailService,
 
         // private readonly logger = new Logger(AdminService.name)
 
@@ -948,7 +951,7 @@ export class AdminService {
 
 
     // CRON JOBS
-    // @Cron('45 * * * * *')
+    @Cron(CronExpression.EVERY_DAY_AT_10PM)
     async handleDailyReport() {
         var today_start = new Date();
         today_start.setHours(0,0,0,0);
@@ -972,6 +975,23 @@ export class AdminService {
                     as: "users"
                 },
             },
+            // Recently Updated users
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$lt: today_start},
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "updatedusers"
+                },
+            },
+
             // Inventories added
             {
                 $lookup: {
@@ -988,9 +1008,46 @@ export class AdminService {
                 },
             },
 
+            // Warehouse Carts
+            {
+                $lookup: {
+                    from: "carts",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                                confirmed: true
+                            }
+                        }
+                    ],
+                    as: "warehousecarts"
+                },
+            },
+
+            // Dockyard Carts
+            {
+                $lookup: {
+                    from: "dockyardcarts",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                                confirmed: true
+                            }
+                        }
+                    ],
+                    as: "dockyardcarts"
+                },
+            },
+
             // Add Fields
             { $addFields: {
                 newUsers: {$size: "$users"},
+            }},
+            { $addFields: {
+                updatedUsers: {$size: "$updatedusers"},
             }},
             { $addFields: {
                 newStock: {$size: "$stocks"},
@@ -1000,14 +1057,103 @@ export class AdminService {
             {
                 $project: {
                     users: 0,
-                    stocks: 0
+                    // stocks: 0,
+                    updatedusers: 0
                 }
             },
         ]
 
         const warehouses = await this.warehouseModel.aggregate(aggregate)
+        const all_categories = await this.categoryModel.find()
+        const super_admins = await this.userModel.find({
+            role: Role.SUPER_ADMIN
+        })
 
-        return warehouses
+        const super_admin_emails = await super_admins.map((ad) => {
+            return ad.email
+        })
+
+        const processed_warehouses = await warehouses.map((warehouse) => {
+
+            const category_info = all_categories.map((category) => {
+
+                let total_dock_sale = 0
+                let total_ware_sale = 0
+
+                const total_added = warehouse.stocks.filter((val) => {
+                    if(val.category === category.name){
+                        return val
+                    }
+                })
+
+                const total_sold = warehouse.stocks.filter((val) => {
+                    if(val.category === category.name && !val.inStock){
+                        return val
+                    }
+                })
+
+                warehouse.dockyardcarts.filter((val) => {
+                    val.items.map((itm) => {
+                        if(itm.category === category.name){
+                            total_dock_sale = total_dock_sale + (itm.price * itm.quantity)
+                        }
+                    })
+                })
+
+                warehouse.warehousecarts.filter((val) => {
+                    val.items.map((itm) => {
+                        if(itm.category === category.name){
+                            total_ware_sale = total_ware_sale + itm.price
+                        }
+                    })
+                })
+
+                return {
+                    category: category.name,
+                    added: total_added.length,
+                    sold: total_sold.length,
+                    dock_total: total_dock_sale,
+                    ware_total: total_ware_sale
+                }
+
+            })
+
+            return {
+                name: warehouse.identifier,
+                currency: warehouse.currency,
+                newUsers: warehouse.newUsers,
+                updatedUsers: warehouse.updatedUsers,
+                addedStock: warehouse.newStock,
+                // stock: stock_info,
+                categoryInfo: category_info,
+                // wareTransactions: warehouse.warehousecarts
+            }
+        })
+
+        let file = await { content: `
+            <html style=" -webkit-print-color-adjust: exact;" lang="en">
+                ${dailyReportHead(moment(new Date()).format('MMMM Do YYYY'))}
+               ${
+                    processed_warehouses.map((warehouse) => {
+                        return `<page class="page">
+                            ${dailyReportBody(warehouse)}
+                        </page>`
+                    })
+                }
+            </html>
+        `}
+
+        const output = await generatePdf(file, {
+            format: 'A4'
+        })
+
+        await this.mailService.sendDailyReportEmail(super_admin_emails, moment(new Date()).format('MMMM Do YYYY'), output)
+
+        return {
+            message: "Daily report sent successfully",
+            super_admins: super_admin_emails,
+            warehouses: processed_warehouses
+        }
     }
 
 }
