@@ -118,7 +118,7 @@ export class AdminService {
 
         await this.notificationService.addNotification({
             title: 'Category Created',
-            description: `${name} was just created`,
+            description: `${name} created`,
             warehouse: warehouseArr,
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
             tag: NotificationTag.CATEGORY
@@ -950,6 +950,49 @@ export class AdminService {
     }
 
     async addToInventory(user: User, payload: AddInventoryDto){
+
+        const { category, quantity, warehouse } = payload
+
+        const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
+
+        const cat = await this.categoryModel.findById(category)
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
+        if(!cat){
+            throw new BadRequestException("Category does not exists");
+        }
+
+        if(!this_warehouse){
+            throw new BadRequestException("Warehouse does not exists");
+        }
+
+        let new_items = []
+
+        for(var i = 0; i < quantity; i++){
+            const ref = nanoid(7)
+            new_items.push({
+                uid: `${cat.code}-${ref}`,
+                category: cat.name,
+                creator: user._id,
+                code: cat.code,
+                ref: ref,
+                warehouse: this_warehouse.identifier,
+                inStock: true,
+                ghost: true
+            })
+        }
+
+        await this.inventoryModel.insertMany(new_items)
+
+        await this.notificationService.addNotification({
+            title: 'Stock Added',
+            description: `${quantity} ${cat.name} added to the inventory.`,
+            warehouse: [warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.INVENTORY
+        })
 
         return {
             message: "Successful"

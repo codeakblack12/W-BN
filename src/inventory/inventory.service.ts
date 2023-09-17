@@ -99,6 +99,7 @@ export class InventoryService {
                 code: item_arr[0],
                 ref: item_arr[1],
                 category: categories.name,
+                ghost: false
             }
 
             // ADD TO INVENTORY

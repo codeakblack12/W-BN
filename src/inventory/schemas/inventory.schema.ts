@@ -51,6 +51,9 @@ export class Inventory {
     @Prop()
     inStock: boolean;
 
+    @Prop()
+    ghost: boolean;
+
 }
 
 export class AddToInventory {

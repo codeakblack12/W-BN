@@ -20,7 +20,8 @@ export class AddCurrencyDto {
 export class AddInventoryDto {
     @ApiProperty()
     @IsNotEmpty()
-    category: string;
+    @IsMongoId()
+    category: ObjectId;
 
     @ApiProperty()
     @IsNotEmpty()
