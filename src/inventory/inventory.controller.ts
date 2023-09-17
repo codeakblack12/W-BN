@@ -43,4 +43,10 @@ export class InventoryController {
         return this.service.addOrRemove(id, "minus", req.user)
     }
 
+    // @UseGuards(InventoryGuard)
+    @Delete('remove-all-in-stock/:id')
+    async removeManyInStock(@Request() req, @Param('id') id: string){
+        return this.service.removeManyInStock(id)
+    }
+
 }
