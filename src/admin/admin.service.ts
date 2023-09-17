@@ -121,7 +121,7 @@ export class AdminService {
             description: `${name} was just created`,
             warehouse: warehouseArr,
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
-            tag: NotificationTag.USER
+            tag: NotificationTag.CATEGORY
         })
 
         return {

@@ -18,6 +18,7 @@ import { Canvas, createCanvas } from 'canvas';
 import * as moment from "moment";
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationTag } from 'src/notification/schemas/notification.schema';
+import { formatMoney } from 'src/components/common/functions/common';
 
 const axios = require('axios').default;
 
@@ -382,7 +383,7 @@ export class SalesService {
 
         await this.notificationService.addNotification({
             title: 'Dockyard Sale',
-            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            description: `${payment_type} payment of ${formatMoney(summary.data.total?.toString(), summary.data.currency)} for ${carts.uid}`,
             warehouse: [carts.warehouse],
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
             tag: NotificationTag.PAYMENT
@@ -438,7 +439,7 @@ export class SalesService {
 
         await this.notificationService.addNotification({
             title: 'Warehouse Sale',
-            description: `${payment_type} payment of ${summary.data.currency}${summary.data.total} for ${carts.uid}`,
+            description: `${payment_type} payment of ${formatMoney(summary.data.total?.toString(), summary.data.currency)} for ${carts.uid}`,
             warehouse: [carts.warehouse],
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
             tag: NotificationTag.PAYMENT
