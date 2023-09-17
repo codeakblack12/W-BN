@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
@@ -28,6 +28,19 @@ export class AdminController {
     async createCountry(@Body(new ValidationPipe()) payload: AddCurrencyDto){
         try {
             return this.service.createCountry(payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Post('inventory/add')
+    async addToInventory(
+        @Request() req,
+        @Body(new ValidationPipe()) payload: AddInventoryDto
+    ){
+        try {
+            return this.service.addToInventory(req.user, payload)
         } catch (error) {
             throw new BadRequestException();
         }

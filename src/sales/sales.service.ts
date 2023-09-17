@@ -230,6 +230,91 @@ export class SalesService {
         }
     }
 
+    async addMultipleToCart(user: User, payload: AddItemsToDockyardCartDto){
+
+        const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
+
+        const { cart, items } = payload
+
+        const carts = await this.cartModel.findOne({uid: cart})
+
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: carts.warehouse
+        })
+
+        if(!carts){
+            throw new BadRequestException("Cart does not exist");
+        }
+
+        const all_categories = await this.categoryModel.find()
+
+        let new_items = []
+        let cart_items = []
+
+        const all_items = items.map((item) => {
+            const categoryInfo_ = all_categories.filter((category) => {
+                if(category.name === item.category){
+                    return category
+                }
+            })
+
+
+            if(!categoryInfo_.length){
+                throw new BadRequestException("Category does not exist");
+            }
+
+            const categoryInfo = categoryInfo_[0]
+
+            const price_ = categoryInfo.price.filter((val) => {
+                if(val.currency === this_warehouse?.currency){
+                    return val
+                }
+            })
+            if(!price_.length){
+                throw new BadRequestException("No valid price attached to this item");
+            }
+
+            for(var i = 0; i < item.quantity; i++){
+                const ref = nanoid(7)
+                const payload ={
+                    uid: `${categoryInfo.code}-${ref}`,
+                    category: categoryInfo.name,
+                }
+                new_items.push({
+                    ...payload,
+                    creator: user._id,
+                    code: categoryInfo.code,
+                    ref: ref,
+                    warehouse: this_warehouse.identifier,
+                    inStock: true
+                })
+                cart_items.push({
+                    ...payload,
+                    scanned_by: user._id,
+                    price: price_[0]?.value,
+                    currency: price_[0]?.currency
+                })
+            }
+
+        })
+
+        // Add to Inventory
+        await this.inventoryModel.insertMany(new_items)
+
+        // Add to Cart
+        await this.cartModel.updateOne(
+            {uid: cart},
+            {items: cart_items }
+        )
+
+        const summary = await this.getCheckoutSummary(cart)
+
+        return {
+            data: cart_items,
+            summary: summary?.data
+        }
+    }
+
     async addToDockyardCart(user: User, payload: AddItemsToDockyardCartDto){
 
         const { cart, items } = payload

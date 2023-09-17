@@ -17,6 +17,22 @@ export class AddCurrencyDto {
 
 }
 
+export class AddInventoryDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    category: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: Currency;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    @Min(1)
+    quantity: number
+
+}
+
 export class GetTransactionDto {
     @ApiProperty()
     limit: number;

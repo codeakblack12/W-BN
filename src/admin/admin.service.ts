@@ -5,7 +5,7 @@ import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -947,6 +947,14 @@ export class AdminService {
             ...payload,
             _id: userId
         }
+    }
+
+    async addToInventory(user: User, payload: AddInventoryDto){
+
+        return {
+            message: "Successful"
+        }
+
     }
 
 
