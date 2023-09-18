@@ -988,7 +988,7 @@ export class AdminService {
 
         await this.notificationService.addNotification({
             title: 'Stock Added',
-            description: `${quantity} ${cat.name} added to the inventory.`,
+            description: `${quantity} ${cat.name} added to the ${warehouse} inventory.`,
             warehouse: [warehouse],
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
             tag: NotificationTag.INVENTORY

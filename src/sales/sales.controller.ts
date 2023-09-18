@@ -163,9 +163,9 @@ export class SalesController {
     @Post('warehouse-cart/add-multiple')
     async addMultipleToCart(@Request() req, @Body(new ValidationPipe()) payload: AddItemsToDockyardCartDto){
         const response =  await this.service.addMultipleToCart(req.user, payload)
-        await response.data.map((item) => {
-            this.salesGateway.server.emit(payload.cart, item)
-        })
+        // await response.data.map((item) => {
+        //     this.salesGateway.server.emit(payload.cart, item)
+        // })
         this.salesGateway.server.emit(`CHECKOUT-${payload.cart}`, response.summary)
 
         return {
