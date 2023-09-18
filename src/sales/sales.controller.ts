@@ -157,6 +157,22 @@ export class SalesController {
         return this.service.addToDockyardCart(req.user, payload)
     }
 
+    // Add Multiple To Warehouse Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('warehouse-cart/add-multiple')
+    async addMultipleToCart(@Request() req, @Body(new ValidationPipe()) payload: AddItemsToDockyardCartDto){
+        const response =  await this.service.addMultipleToCart(req.user, payload)
+        // await response.data.map((item) => {
+        //     this.salesGateway.server.emit(payload.cart, item)
+        // })
+        this.salesGateway.server.emit(`CHECKOUT-${payload.cart}`, response.summary)
+
+        return {
+            message: "Successful"
+        }
+    }
+
     // Checkout Cart
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))

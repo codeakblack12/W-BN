@@ -5,7 +5,7 @@ import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -118,7 +118,7 @@ export class AdminService {
 
         await this.notificationService.addNotification({
             title: 'Category Created',
-            description: `${name} was just created`,
+            description: `${name} created`,
             warehouse: warehouseArr,
             role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
             tag: NotificationTag.CATEGORY
@@ -947,6 +947,57 @@ export class AdminService {
             ...payload,
             _id: userId
         }
+    }
+
+    async addToInventory(user: User, payload: AddInventoryDto){
+
+        const { category, quantity, warehouse } = payload
+
+        const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
+
+        const cat = await this.categoryModel.findById(category)
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
+        if(!cat){
+            throw new BadRequestException("Category does not exists");
+        }
+
+        if(!this_warehouse){
+            throw new BadRequestException("Warehouse does not exists");
+        }
+
+        let new_items = []
+
+        for(var i = 0; i < quantity; i++){
+            const ref = nanoid(7)
+            new_items.push({
+                uid: `${cat.code}-${ref}`,
+                category: cat.name,
+                creator: user._id,
+                code: cat.code,
+                ref: ref,
+                warehouse: this_warehouse.identifier,
+                inStock: true,
+                ghost: true
+            })
+        }
+
+        await this.inventoryModel.insertMany(new_items)
+
+        await this.notificationService.addNotification({
+            title: 'Stock Added',
+            description: `${quantity} ${cat.name} added to the ${warehouse} inventory.`,
+            warehouse: [warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.INVENTORY
+        })
+
+        return {
+            message: "Successful"
+        }
+
     }
 
 

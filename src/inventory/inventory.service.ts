@@ -92,21 +92,19 @@ export class InventoryService {
                 throw new WsException("Invalid item!");
             }
 
+
             payload = {
                 uid: id,
                 creator: user._id,
                 code: item_arr[0],
                 ref: item_arr[1],
                 category: categories.name,
+                ghost: false
             }
 
             // ADD TO INVENTORY
             const res = await this.inventoryModel.create({
-                uid: id,
-                creator: user._id,
-                code: item_arr[0],
-                ref: item_arr[1],
-                category: categories.name,
+                ...payload,
                 warehouse: warehouse,
                 inStock: true
             })

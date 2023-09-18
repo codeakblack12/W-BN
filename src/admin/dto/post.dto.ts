@@ -17,6 +17,23 @@ export class AddCurrencyDto {
 
 }
 
+export class AddInventoryDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsMongoId()
+    category: ObjectId;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: Currency;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    @Min(1)
+    quantity: number
+
+}
+
 export class GetTransactionDto {
     @ApiProperty()
     limit: number;
