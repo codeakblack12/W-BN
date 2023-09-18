@@ -849,8 +849,8 @@ export class SalesService {
                 const vat_ = (price * cat.vat)/100
                 const covidVat_ = (price * cat.covidVat)/100
 
-                vat = vat + vat_
-                covidVat = covidVat + covidVat_
+                vat = vat + vat_ || 0
+                covidVat = covidVat + covidVat_ || 0
 
                 subtotal = subtotal + price
 
