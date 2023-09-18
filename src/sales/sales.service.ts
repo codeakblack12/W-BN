@@ -580,6 +580,7 @@ export class SalesService {
             amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
+            customer_name: payload.customer_name || "N/A",
             payment_type: payment_type,
             cart: {
                 id: carts._id,
@@ -864,7 +865,9 @@ export class SalesService {
             }
         })
 
-        const total = subtotal + covidVat + vat
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
 
         return {
             data: {
@@ -919,7 +922,9 @@ export class SalesService {
 
         })
 
-        const total = subtotal + covidVat + vat
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
 
         return {
             data: {
