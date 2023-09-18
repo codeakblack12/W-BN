@@ -274,7 +274,8 @@ export class SalesService {
                     $match : {
                         ghost: true,
                         category: categoryInfo.name,
-                        warehouse: this_warehouse.identifier
+                        warehouse: this_warehouse.identifier,
+                        inStock: true
                     }
                 },
                 {
