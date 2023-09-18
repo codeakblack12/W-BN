@@ -688,7 +688,9 @@ export class SalesService {
 
         })
 
-        const total = subtotal + covidVat + vat
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
 
         return {
             data: {
@@ -791,7 +793,9 @@ export class SalesService {
             }
         })
 
-        const total = subtotal + covidVat + vat
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
 
         return {
                 data: {
