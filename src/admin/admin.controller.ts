@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
@@ -152,6 +152,29 @@ export class AdminController {
     async getTransactionOverview(@Query(new ValidationPipe()) query: GetTransactionOverviewDto){
         try {
             return this.service.getTransactionOverview(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('inventory-report')
+    async getInventoryReport(@Query(new ValidationPipe()) query: GetInventoryReportDto){
+        try {
+            return this.service.getInventoryReport(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('sales-report')
+    async getSalesReport(@Body(new ValidationPipe()) payload: GetSalesReportDto){
+        try {
+            return this.service.getSalesReport(payload)
         } catch (error) {
             throw new BadRequestException();
         }

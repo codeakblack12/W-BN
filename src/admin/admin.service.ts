@@ -5,7 +5,7 @@ import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetNotificationsDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -494,6 +494,105 @@ export class AdminService {
                 total,
                 change: change,
                 overview: transactions
+            }
+        }
+    }
+
+    async getInventoryReport(query: GetInventoryReportDto){
+        const months = ['JAN', 'FEB', 'MAR', 'APR',
+            'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+        ]
+
+        const { from, to, category } = query
+        const warehouse = query.warehouse || ""
+
+        if(!from || !to){
+            throw new BadRequestException('Invalid dates!');
+        }
+        const from_arr = from.split("-")
+        const to_arr = to.split("-")
+
+        if(
+            Number(from_arr[0]) > Number(to_arr[0]) ||
+            (
+              (Number(from_arr[0]) === Number(to_arr[0])) && (Number(from_arr[1]) > Number(to_arr[1]))
+            ) ||
+            ( Number(from_arr[1]) > 12 || Number(to_arr[1]) > 12) ||
+            ( Number(from_arr[1]) < 1 || Number(to_arr[1]) < 1)
+        ){
+            throw new BadRequestException('Invalid date range!');
+        }
+
+        const dates = await getDateRangeArray(
+            `${from}-01`, `${to}-01`
+        )
+
+        let inventory_overview = []
+
+        for (var i = 0; i < dates.length - 1; i++){
+            const total_inventory = await this.inventoryModel.find({
+                category: category,
+                warehouse: warehouse,
+                createdAt:{$gte:new Date(dates[i]),$lt: new Date(dates[i + 1])}
+            }).count()
+
+            inventory_overview.push({
+                total: total_inventory,
+                year: new Date(dates[i]).getFullYear(),
+                month: months[new Date(dates[i]).getMonth()]
+            })
+
+        }
+
+        return {
+            overview: inventory_overview
+        }
+
+    }
+
+    async getSalesReport(payload: GetSalesReportDto){
+        const { years, warehouse } = payload
+
+        if(years.length > 3){
+            throw new BadRequestException('Maximum of 3 years!');
+        }
+
+        if(years.length < 1){
+            throw new BadRequestException('Minimum of one year!');
+        }
+
+        const today = new Date()
+
+        const filter_years = years.filter((year) => {
+            if(Number(year) < 2000 || Number(year) > today.getFullYear()){
+                return year
+            }
+        })
+
+        if(filter_years.length){
+            throw new BadRequestException('Invalid year!');
+        }
+
+        let data = []
+
+        for(var i = 0; i < years.length; i++){
+            const query = {
+                from: `${years[i]}-01`,
+                to: `${years[i]}-12`,
+                warehouse: warehouse
+            }
+
+            const transactionOverview = await this.getTransactionOverview(query)
+
+            data.push({
+                year: years[i],
+                overview: transactionOverview.data.overview
+            })
+        }
+
+        return {
+            data: {
+                report: data
             }
         }
     }

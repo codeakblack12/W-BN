@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId, IsOptional } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId, IsOptional, isArray } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { Currency } from "src/inventory/dto/post.dto";
 import { SALE_LOCATIONS, TRANSACTION_STATUS } from "src/sales/schemas/sales.schema";
@@ -141,6 +141,35 @@ export class GetTransactionOverviewDto {
     // @IsNotEmpty()
     // @IsEnum(Currency, { message: "Invalid Currency" })
     // currency: Currency;
+}
+
+
+export class GetInventoryReportDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    from: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    to: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    category: string;
+}
+
+export class GetSalesReportDto {
+    @ApiProperty()
+    @IsArray()
+    years: [];
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
 }
 
 
