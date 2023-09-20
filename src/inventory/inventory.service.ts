@@ -2,11 +2,12 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { InjectModel } from '@nestjs/mongoose';
 import { Category, Inventory } from './schemas/inventory.schema';
 import * as mongoose from 'mongoose';
-import { User, Warehouse } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { CreateCategoryDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { WsException } from '@nestjs/websockets';
 import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 @Injectable()
 export class InventoryService {
@@ -135,10 +136,10 @@ export class InventoryService {
             throw new BadRequestException("Category does not exist")
         }
 
-        // await this.inventoryModel.deleteMany({
-        //     category: category.name,
-        //     inStock: true
-        // })
+        await this.inventoryModel.deleteMany({
+            category: category.name,
+            inStock: true
+        })
 
         return {
             message: "Successful"
