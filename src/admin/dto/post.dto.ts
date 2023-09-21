@@ -164,8 +164,8 @@ export class GetInventoryReportDto {
 
 export class GetSalesReportDto {
     @ApiProperty()
-    @IsArray()
-    years: [];
+    // @IsArray()
+    years: string;
 
     @ApiProperty()
     @IsNotEmpty()

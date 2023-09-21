@@ -553,17 +553,19 @@ export class AdminService {
     async getSalesReport(payload: GetSalesReportDto){
         const { years, warehouse } = payload
 
-        if(years.length > 3){
+        const yearsArr = JSON.parse(years)
+
+        if(yearsArr.length > 3){
             throw new BadRequestException('Maximum of 3 years!');
         }
 
-        if(years.length < 1){
+        if(yearsArr.length < 1){
             throw new BadRequestException('Minimum of one year!');
         }
 
         const today = new Date()
 
-        const filter_years = years.filter((year) => {
+        const filter_years = yearsArr.filter((year) => {
             if(Number(year) < 2000 || Number(year) > today.getFullYear()){
                 return year
             }
@@ -575,17 +577,17 @@ export class AdminService {
 
         let data = []
 
-        for(var i = 0; i < years.length; i++){
+        for(var i = 0; i < yearsArr.length; i++){
             const query = {
-                from: `${years[i]}-01`,
-                to: `${years[i]}-12`,
+                from: `${yearsArr[i]}-01`,
+                to: `${yearsArr[i]}-12`,
                 warehouse: warehouse
             }
 
             const transactionOverview = await this.getTransactionOverview(query)
 
             data.push({
-                year: years[i],
+                year: yearsArr[i],
                 overview: transactionOverview.data.overview
             })
         }
