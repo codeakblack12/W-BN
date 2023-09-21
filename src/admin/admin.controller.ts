@@ -172,9 +172,9 @@ export class AdminController {
     @UseGuards(AdminGuard)
     // @UsePipes(new ValidationPipe({ transform: true }))
     @Get('sales-report')
-    async getSalesReport(@Body(new ValidationPipe()) payload: GetSalesReportDto){
+    async getSalesReport(@Query(new ValidationPipe()) query: GetSalesReportDto){
         try {
-            return this.service.getSalesReport(payload)
+            return this.service.getSalesReport(query)
         } catch (error) {
             throw new BadRequestException();
         }
