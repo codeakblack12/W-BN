@@ -657,7 +657,6 @@ export class SalesService {
         return {
             message: "Successful"
         }
-
     }
 
     async getCartById(id: string){
