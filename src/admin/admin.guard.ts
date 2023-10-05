@@ -3,10 +3,15 @@ import { JwtService } from '@nestjs/jwt';
 import { Observable } from 'rxjs';
 import { jwtConstants } from 'src/auth/constants';
 import { Request } from 'express';
+import { AuthService } from 'src/auth/auth.service';
+import { Role } from 'src/auth/schemas/auth.schema';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private authService: AuthService
+  ) {}
 
   async canActivate(
     context: ExecutionContext,
@@ -23,7 +28,20 @@ export class AdminGuard implements CanActivate {
           secret: jwtConstants.secret
         }
       );
-      request['user'] = payload;
+      if(payload.platform !== "WEB"){
+        throw new UnauthorizedException();
+      }
+
+      const user = await this.authService.getUserFromAuthenticationToken(token)
+
+      if(
+        !user.role.includes(Role.SUPER_ADMIN) && !user.role.includes(Role.ADMIN) && !user.role.includes(Role.MANAGER)
+      ){
+        throw new UnauthorizedException();
+      }
+
+      request['user'] = user;
+
     } catch {
       throw new UnauthorizedException();
     }

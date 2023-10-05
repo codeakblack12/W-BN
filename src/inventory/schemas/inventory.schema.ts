@@ -19,6 +19,12 @@ export class Category {
     @Prop()
     stockThreshold: number
 
+    @Prop()
+    vat: number
+
+    @Prop()
+    covidVat: number
+
 }
 
 @Schema({
@@ -44,6 +50,9 @@ export class Inventory {
 
     @Prop()
     inStock: boolean;
+
+    @Prop()
+    ghost: boolean;
 
 }
 

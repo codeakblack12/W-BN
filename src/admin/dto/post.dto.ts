@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, isEnum, IsMongoId, IsOptional, isArray } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { Currency } from "src/inventory/dto/post.dto";
 import { SALE_LOCATIONS, TRANSACTION_STATUS } from "src/sales/schemas/sales.schema";
@@ -17,6 +17,23 @@ export class AddCurrencyDto {
 
 }
 
+export class AddInventoryDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsMongoId()
+    category: ObjectId;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: Currency;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    @Min(1)
+    quantity: number
+
+}
+
 export class GetTransactionDto {
     @ApiProperty()
     limit: number;
@@ -29,14 +46,24 @@ export class GetTransactionDto {
 
     @ApiProperty()
     @IsEnum(TRANSACTION_STATUS)
+    @IsOptional()
     status: string;
 
     @ApiProperty()
     @IsEnum(SALE_LOCATIONS)
+    @IsOptional()
     location: string;
 
     @ApiProperty()
     warehouse: string;
+
+    @ApiProperty()
+    @IsOptional()
+    from: string;
+
+    @ApiProperty()
+    @IsOptional()
+    to: string;
 
 
 }
@@ -88,6 +115,15 @@ export class GetUsersDto {
 
 }
 
+export class GetNotificationsDto {
+    @ApiProperty()
+    limit: number;
+
+    @ApiProperty()
+    page: number;
+
+}
+
 export class GetTransactionOverviewDto {
     @ApiProperty()
     @IsNotEmpty()
@@ -105,6 +141,35 @@ export class GetTransactionOverviewDto {
     // @IsNotEmpty()
     // @IsEnum(Currency, { message: "Invalid Currency" })
     // currency: Currency;
+}
+
+
+export class GetInventoryReportDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    from: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    to: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    category: string;
+}
+
+export class GetSalesReportDto {
+    @ApiProperty()
+    // @IsArray()
+    years: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    warehouse: string;
 }
 
 

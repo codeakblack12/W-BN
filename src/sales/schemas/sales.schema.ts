@@ -1,4 +1,5 @@
 import { Prop,  Schema, SchemaFactory } from "@nestjs/mongoose";
+import { IsOptional } from "class-validator";
 
 
 export enum PAY_METHODS {
@@ -16,7 +17,7 @@ export enum SALE_LOCATIONS {
 export enum TRANSACTION_STATUS {
     PENDING = 'PENDING',
     COMPLETED = 'COMPLETED',
-    CANCELLED = 'CANCELLED',
+    CANCELED = 'CANCELED',
 }
 
 @Schema({
@@ -38,6 +39,40 @@ export class Item {
 
     @Prop()
     price: number;
+
+    @Prop()
+    vat: number;
+
+    @Prop()
+    covidVat: number;
+
+}
+
+@Schema({
+    timestamps: true
+})
+export class DockItem {
+
+    @Prop()
+    category: string;
+
+    @Prop()
+    quantity: number;
+
+    @Prop()
+    unit_price: number;
+
+    @Prop()
+    currency: string;
+
+    @Prop()
+    price: number;
+
+    @Prop()
+    vat: number;
+
+    @Prop()
+    covidVat: number;
 
 }
 
@@ -86,6 +121,9 @@ export class Transaction {
     @Prop()
     customer_contact_info: string
 
+    @Prop()
+    customer_name: string
+
 }
 
 @Schema({
@@ -109,6 +147,9 @@ export class Cart {
     warehouse: string;
 
     @Prop()
+    customer_name: string;
+
+    @Prop()
     payment_type: PAY_METHODS;
 
     @Prop()
@@ -119,6 +160,9 @@ export class Cart {
 
     @Prop()
     confirmed: boolean;
+
+    @Prop()
+    closed: boolean;
 
     @Prop()
     items: Item[];
@@ -149,7 +193,10 @@ export class DockyardCart {
     confirmed: boolean;
 
     @Prop()
-    items: Item[];
+    closed: boolean;
+
+    @Prop()
+    items: DockItem[];
 
 }
 
@@ -160,6 +207,10 @@ export class CreateCart {
 
     @Prop()
     warehouse: string;
+
+    @Prop()
+    @IsOptional()
+    customer_name: string;
 
 }
 

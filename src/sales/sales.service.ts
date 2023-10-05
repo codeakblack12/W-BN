@@ -3,9 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Cart, DockyardCart, Transaction } from './schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import mongoose, { ObjectId } from 'mongoose';
-import { AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, AddToCartDto, AddToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, CreateCartDto, CreateDockyardCartDto, MomoPaymentDto, PaystackLinkDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
-import { User, Warehouse } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { BadRequestException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +15,10 @@ import { generatePdf } from "html-pdf-node"
 import { receiptBody, receiptHeader } from 'src/components/common/functions/templates';
 import * as JsBarcode from 'jsbarcode';
 import { Canvas, createCanvas } from 'canvas';
+import * as moment from "moment";
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
+import { formatMoney } from 'src/components/common/functions/common';
 
 const axios = require('axios').default;
 
@@ -36,7 +40,10 @@ export class SalesService {
         private warehouseModel: mongoose.Model<Warehouse>,
         @InjectModel(Transaction.name)
         private transactionModel: mongoose.Model<Transaction>,
+
+        private notificationService: NotificationService,
     ){}
+
 
     async createCart(user: User, payload: CreateCartDto){
         const { counter, warehouse } = payload
@@ -63,12 +70,66 @@ export class SalesService {
             uid: generatedCardId,
             handler: user._id,
             warehouse: warehouse,
+            customer_name: payload.customer_name || "" ,
             confirmed: false,
+            closed: false,
             counter,
             items: []
         })
 
         return res
+    }
+
+    async closeCart(user: User, payload: CloseCartDto){
+        const { cart } = payload
+
+        const carts = await this.cartModel.findOne({uid: cart})
+
+        if(!carts){
+            throw new WsException("Cart does not exist");
+        }
+
+        await this.cartModel.findOneAndUpdate(
+            { uid: cart },
+            {
+                '$set': {
+                    closed: true
+                }
+            }
+        )
+
+        return {
+            message: "Successful",
+            cart: cart,
+            warehouse: carts.warehouse
+        }
+
+    }
+
+    async closeDockyardCart(user: User, payload: CloseCartDto){
+        const { cart } = payload
+
+        const carts = await this.dockyardcartModel.findOne({uid: cart})
+
+        if(!carts){
+            throw new WsException("Cart does not exist");
+        }
+
+        await this.dockyardcartModel.findOneAndUpdate(
+            { uid: cart },
+            {
+                '$set': {
+                    closed: true
+                }
+            }
+        )
+
+        return {
+            message: "Successful",
+            cart: cart,
+            warehouse: carts.warehouse
+        }
+
     }
 
     async createDockyardCart(user: User, payload: CreateDockyardCartDto){
@@ -90,6 +151,7 @@ export class SalesService {
             handler: user._id,
             warehouse: payload.warehouse,
             confirmed: false,
+            closed: false,
             items: []
         })
 
@@ -107,6 +169,7 @@ export class SalesService {
         }
 
         const items = await this.inventoryModel.findOne({uid: item})
+
         if(!items){
             console.log("Item does not exist")
             throw new WsException("Item does not exist");
@@ -135,7 +198,9 @@ export class SalesService {
             category: items.category,
             scanned_by: user._id,
             price: categoryPrice[0].value,
-            currency: categoryPrice[0].currency
+            currency: categoryPrice[0].currency,
+            vat: categoryInfo.vat || 0,
+            covidVat: categoryInfo.covidVat || 0
         }
 
         const old_items = carts.items
@@ -165,106 +230,267 @@ export class SalesService {
         }
     }
 
-    async addToDockyardCart(user: User, payload: AddToDockyardCartDto){
+    async addMultipleToCart(user: User, payload: AddItemsToDockyardCartDto){
 
-        const { cart, item, category } = payload
+        const nanoid = customAlphabet(process.env.ALPHA_NUM_CAPS)
+
+        const { cart, items } = payload
+
+        const carts = await this.cartModel.findOne({uid: cart})
+
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: carts.warehouse
+        })
+
+        if(!carts){
+            throw new BadRequestException("Cart does not exist");
+        }
+
+        const all_categories = await this.categoryModel.find()
+
+        let new_items = []
+        let cart_items = []
+
+        // const all_items = items.map(async (item) => {
+        for(var j = 0; j < items.length; j++){
+
+            const item = items[j]
+
+            const categoryInfo_ = await all_categories.filter((category) => {
+                if(category.name === item.category){
+                    return category
+                }
+            })
+
+
+            if(!categoryInfo_.length){
+                throw new BadRequestException("Category does not exist");
+            }
+
+            const categoryInfo = categoryInfo_[0]
+
+            const ghost_aggregate = [
+                {
+                    $match : {
+                        ghost: true,
+                        category: categoryInfo.name,
+                        warehouse: this_warehouse.identifier,
+                        inStock: true
+                    }
+                },
+                {
+                    $lookup:
+                      {
+                        from: "carts",
+                        localField: "uid",
+                        foreignField: "items.uid",
+                        pipeline: [
+                            {   $match: {
+                                    uid: { $ne: cart }
+                                }
+                            }
+                        ],
+                        as: "carts"
+                      }
+                },
+                {
+                    $addFields: {
+                        cartsAvailable: {$size: "$carts"},
+                    }
+                },
+                {
+                    $project: {
+                        carts: 0,
+                    }
+                },
+                {
+                    $match : {
+                        cartsAvailable: { $eq: 0 },
+                    }
+                },
+            ]
+
+            const ghosts = await this.inventoryModel.aggregate(ghost_aggregate)
+
+            const availableRefs = ghosts.map((val) => {
+                return val.ref
+            })
+
+            const price_ = categoryInfo.price.filter((val) => {
+                if(val.currency === this_warehouse?.currency){
+                    return val
+                }
+            })
+            if(!price_.length){
+                throw new BadRequestException("No valid price attached to this item");
+            }
+
+            for(var i = 0; i < item.quantity; i++){
+
+                let ref
+
+                if(i < availableRefs.length){
+                    ref = availableRefs[i]
+                }else{
+                    ref = nanoid(7)
+                }
+
+                const payload ={
+                    uid: `${categoryInfo.code}-${ref}`,
+                    category: categoryInfo.name,
+                }
+
+                new_items.push({
+                    ...payload,
+                    creator: user._id,
+                    code: categoryInfo.code,
+                    ref: ref,
+                    warehouse: this_warehouse.identifier,
+                    inStock: true,
+                    ghost: true
+                })
+                cart_items.push({
+                    ...payload,
+                    scanned_by: user._id,
+                    price: price_[0]?.value,
+                    currency: price_[0]?.currency
+                })
+            }
+
+        }
+
+        // // Add to Inventory
+        // await this.inventoryModel.insertMany(new_items)
+        for(var i = 0; i < new_items.length; i++){
+            const itm = new_items[i]
+            await this.inventoryModel.updateOne(
+                {ref: itm.ref},
+                { $set: itm },
+                { upsert: true }
+            )
+        }
+
+        // // Add to Cart
+        await this.cartModel.updateOne(
+            {uid: cart},
+            {items: cart_items }
+        )
+
+        const summary = await this.getCheckoutSummary(cart)
+
+        return {
+            data: cart_items,
+            summary: summary?.data
+        }
+    }
+
+    async addToDockyardCart(user: User, payload: AddItemsToDockyardCartDto){
+
+        const { cart, items } = payload
 
         const carts = await this.dockyardcartModel.findOne({uid: cart})
 
         if(!carts){
-            throw new WsException("Cart does not exist");
+            throw new BadRequestException("Cart does not exist");
         }
+
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: carts.warehouse
+        })
+
+        if(!carts){
+            throw new BadRequestException("Warehouse does not exist");
+        }
+
+        const all_categories = await this.categoryModel.find()
 
         // Get Item Price
-        const categoryInfo = await this.categoryModel.findOne({name: category})
-        const warehouseInfo = await this.warehouseModel.findOne({identifier: user.warehouse[0]})
+        const all_items = items.map((item) => {
+            // const categoryInfo = await this.categoryModel.findOne({name: item.category})
+            const categoryInfo_ = all_categories.filter((category) => {
+                if(category.name === item.category){
+                    return category
+                }
+            })
 
-        if(!categoryInfo || !warehouseInfo){
-            throw new WsException("There seems to be an issue with the category or warehouse");
-        }
 
-        const categoryPrice = categoryInfo.price.filter((val) => {
-            if(val.currency === warehouseInfo.currency){
-                return val
+            if(!categoryInfo_.length){
+                throw new BadRequestException("Category does not exist");
+            }
+
+            const categoryInfo = categoryInfo_[0]
+
+            const price_ = categoryInfo.price.filter((val) => {
+                if(val.currency === this_warehouse?.currency){
+                    return val
+                }
+            })
+            if(!price_.length){
+                throw new BadRequestException("No valid price attached to this item");
+            }
+
+            return {
+                ...item,
+                unit_price: price_[0]?.dockyard_value,
+                currency: price_[0]?.currency,
+                price: price_[0]?.dockyard_value * item.quantity,
+                vat: categoryInfo.vat || 0,
+                covidVat: categoryInfo.covidVat || 0
             }
         })
 
-        const new_payload = {
-            uid: item,
-            category: category,
-            scanned_by: user._id,
-            price: categoryPrice[0].dockyard_value,
-            currency: categoryPrice[0].currency
-        }
-
-        const old_items = carts.items
-
-
-        const itmExists = await old_items.filter((val) => {
-            if(val.uid === item){
-                return val
-            }
-        })
-
-        if(itmExists.length){
-            console.log("Item already in cart")
-            throw new WsException("Item already in cart");
-        }else{
-            await this.dockyardcartModel.updateOne(
-                {uid: cart},
-                {$push: {items: new_payload }}
-            )
-        }
+        await this.dockyardcartModel.updateOne(
+            {uid: cart},
+            {items: all_items, handler: user._id }
+        )
 
         return {
-            _id: carts._id,
-            uid: carts.uid,
-            item_count: old_items.length + 1,
-            createdAt: carts.createdAt
+            message: "Successful"
         }
+
     }
 
     async deleteFromDockyardCart(user: User, payload: AddToDockyardCartDto){
 
-        const { cart, item, category } = payload
+        // const { cart, item, category } = payload
 
-        const carts = await this.dockyardcartModel.findOne({uid: cart})
+        // const carts = await this.dockyardcartModel.findOne({uid: cart})
 
-        if(!carts){
-            throw new WsException("Cart does not exist");
-        }
+        // if(!carts){
+        //     throw new WsException("Cart does not exist");
+        // }
 
-        const old_items = carts.items
+        // const old_items = carts.items
 
-        let new_items = []
+        // let new_items = []
 
-        if(item === "all"){
-            old_items.filter((item) => {
-                if(item.category !== category){
-                    new_items.push(item)
-                }
-            })
-        }else{
-            old_items.filter((item_) => {
-                if(item_.uid !== item){
-                    new_items.push(item_)
-                }
-            })
-        }
+        // if(item === "all"){
+        //     old_items.filter((item) => {
+        //         if(item.category !== category){
+        //             new_items.push(item)
+        //         }
+        //     })
+        // }else{
+        //     old_items.filter((item_) => {
+        //         if(item_.uid !== item){
+        //             new_items.push(item_)
+        //         }
+        //     })
+        // }
 
-        await this.dockyardcartModel.updateOne(
-            {uid: cart},
-            {$set: {items: new_items }}
-        )
+        // await this.dockyardcartModel.updateOne(
+        //     {uid: cart},
+        //     {$set: {items: new_items }}
+        // )
 
 
 
-        return {
-            _id: carts._id,
-            uid: carts.uid,
-            item_count: new_items.length,
-            createdAt: carts.createdAt
-        }
+        // return {
+        //     _id: carts._id,
+        //     uid: carts.uid,
+        //     item_count: new_items.length,
+        //     createdAt: carts.createdAt
+        // }
     }
 
     async checkoutDockyardCart(user: User, payload: CheckoutDockyardCartDto){
@@ -273,7 +499,7 @@ export class SalesService {
 
         const carts = await this.dockyardcartModel.findById(id)
 
-        if( payment_type === "ONLINE" || payment_type === "MOMO"){
+        if( payment_type === "ONLINE"){
             throw new BadRequestException(`Instant confirmation not allowed for ${payment_type} payment`);
         }
 
@@ -294,9 +520,10 @@ export class SalesService {
             handler: user._id,
             reference: ref_id,
             currency: summary.data.currency,
-            amount: summary.data.subtotal,
+            amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
+            customer_name: payload.customer_name || "N/A",
             payment_type: payment_type,
             cart: {
                 id: carts._id,
@@ -307,6 +534,14 @@ export class SalesService {
         }
 
         await this.transactionModel.create(transaction_payload)
+
+        await this.notificationService.addNotification({
+            title: 'Dockyard Sale',
+            description: `${payment_type} payment of ${formatMoney(summary.data.total?.toString(), summary.data.currency)} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             message: 'Successful'
@@ -320,7 +555,7 @@ export class SalesService {
 
         const carts = await this.cartModel.findById(id)
 
-        if( payment_type === "ONLINE" || payment_type === "MOMO"){
+        if( payment_type === "ONLINE"){
             throw new BadRequestException(`Instant confirmation not allowed for ${payment_type} payment`);
         }
 
@@ -342,9 +577,10 @@ export class SalesService {
             handler: user._id,
             reference: ref_id,
             currency: summary.data.currency,
-            amount: summary.data.subtotal,
+            amount: summary.data.total,
             status: "COMPLETED",
             customer_contact_info: email || "N/A",
+            customer_name: payload.customer_name || "N/A",
             payment_type: payment_type,
             cart: {
                 id: carts._id,
@@ -355,6 +591,14 @@ export class SalesService {
         }
 
         await this.transactionModel.create(transaction_payload)
+
+        await this.notificationService.addNotification({
+            title: 'Warehouse Sale',
+            description: `${payment_type} payment of ${formatMoney(summary.data.total?.toString(), summary.data.currency)} for ${carts.uid}`,
+            warehouse: [carts.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             message: 'Successful',
@@ -370,7 +614,8 @@ export class SalesService {
         const carts = await this.cartModel.find({
             // warehouse: {$in: warehouse_},
             warehouse: warehouse,
-            confirmed: false
+            confirmed: false,
+            closed: {'$ne': true},
         })
 
         return {
@@ -385,14 +630,19 @@ export class SalesService {
 
         const carts = await this.dockyardcartModel.find({
             warehouse: warehouse,
-            confirmed: false
+            confirmed: false,
+            closed: {'$ne': true},
         })
 
         const carts_ = await carts.map((cart) => {
+            let item_count = 0
+            cart.items?.map((val) => {
+                item_count = item_count + val.quantity
+            })
             return {
                 _id: cart._id,
                 uid: cart.uid,
-                item_count: cart.items.length,
+                item_count: item_count,
                 createdAt: cart.createdAt
             }
         })
@@ -411,45 +661,82 @@ export class SalesService {
             throw new BadRequestException("Cart does not exist");
         }
 
+        const handler = await this.userModel.findById(cart.handler)
+
+        const transaction = await this.transactionModel.findOne({
+            payment_type: cart.payment_type,
+            status: "COMPLETED",
+            "cart.uid": cart.uid
+        })
+        .sort({createdAt: -1})
+
         const cart_items = cart.items
 
-        const categories = await this.categoryModel.find()
-
-        let items = []
+        let items = cart_items
         let subtotal = 0
+        let covidVat = 0
+        let vat = 0
 
-        categories.map((cat) => {
-            let qty = 0
-            let price = 0
-            let items_ = []
-            cart_items.map((item) => {
-                if(item.category === cat.name){
-                    price = price + item.price
-                    qty = qty + 1
-                    items_.push(item)
-                }
-            })
-            if(qty > 0){
-                subtotal = subtotal + price
-                items.push({
-                    category: cat.name,
-                    quantity: qty,
-                    price: price,
-                    items: items_
-                })
+        await cart_items.map((item) => {
+            const vat_ = (item.price * item.vat)/100
+            const covidVat_ = (item.price * item.covidVat)/100
+
+            vat = vat + vat_
+            covidVat = covidVat + covidVat_
+
+            subtotal = subtotal + item.price
+
+        })
+
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
+
+        return {
+            data: {
+                _id: cart._id,
+                uid: cart.uid,
+                merchant: {
+                    firstName: handler.firstName,
+                    lastName: handler.lastName
+                },
+                customer_name: transaction?.customer_name || "N/A",
+                confirmed: cart.confirmed,
+                createdAt: cart.createdAt,
+                subtotal: subtotal || 0,
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                currency: cart_items[0]?.currency || 'GHS',
+                items: items,
+                payment_type: cart.payment_type
+            }
+        }
+
+    }
+
+    async getDockyardCartItems(id: string){
+
+        const cart = await this.dockyardcartModel.findOne({
+            uid: id
+        })
+
+        if(!cart){
+            throw new BadRequestException("Cart does not exist");
+        }
+
+        const cart_items = cart.items.map((item) => {
+            return {
+                category: item.category,
+                price: item.price,
+                quantity: item.quantity
             }
         })
 
         return {
-                data: {
-                _id: cart._id,
-                uid: cart.uid,
-                confirmed: cart.confirmed,
-                createdAt: cart.createdAt,
-                subtotal: subtotal || 0,
-                currency: cart_items[0]?.currency || 'N/A',
-                items: items
-            }
+            data: cart_items
         }
 
     }
@@ -472,6 +759,8 @@ export class SalesService {
 
         let items = []
         let subtotal = 0
+        let vat = 0
+        let covidVat = 0
 
         categories.map((cat) => {
             let qty = 0
@@ -485,27 +774,45 @@ export class SalesService {
                 }
             })
             if(qty > 0){
+                const vat_ = (price * cat.vat)/100
+                const covidVat_ = (price * cat.covidVat)/100
+
+                vat = vat + vat_
+                covidVat = covidVat + covidVat_
+
                 subtotal = subtotal + price
+
                 items.push({
                     category: cat.name,
                     quantity: qty,
                     price: price,
-                    items: items_
+                    items: items_,
+                    vat: vat_,
+                    covidVat: covidVat_
                 })
             }
         })
+
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
 
         return {
                 data: {
                 _id: cart._id,
                 uid: cart.uid,
                 merchant: {
-                    firstName: handler.firstName,
-                    lastName: handler.lastName
+                    firstName: handler.firstName || "N/A",
+                    lastName: handler.lastName || "N/A"
                 },
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items
             }
@@ -527,8 +834,12 @@ export class SalesService {
 
         const categories = await this.categoryModel.find()
 
+        const handler = await this.userModel.findById(cart.handler)
+
         let items = []
         let subtotal = 0
+        let vat = 0
+        let covidVat = 0
 
         categories.map((cat) => {
             let qty = 0
@@ -540,22 +851,45 @@ export class SalesService {
                 }
             })
             if(qty > 0){
+                const vat_ = (price * cat.vat)/100
+                const covidVat_ = (price * cat.covidVat)/100
+
+                vat = vat + vat_ || 0
+                covidVat = covidVat + covidVat_ || 0
+
                 subtotal = subtotal + price
+
                 items.push({
                     category: cat.name,
                     quantity: qty,
                     price: price,
+                    vat: vat_,
+                    covidVat: covidVat_
                 })
             }
         })
 
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
+
         return {
-                data: {
+            data: {
                 _id: cart._id,
                 uid: cart.uid,
+                customer_name: cart.customer_name || "",
+                merchant: {
+                    firstName: handler?.firstName || "N/A",
+                    lastName: handler?.lastName || "N/A"
+                },
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items,
                 payment_type: cart.payment_type
@@ -576,38 +910,39 @@ export class SalesService {
 
         const cart_items = cart.items
 
-        const categories = await this.categoryModel.find()
-
-        let items = []
+        let items = cart_items
         let subtotal = 0
+        let covidVat = 0
+        let vat = 0
 
-        categories.map((cat) => {
-            let qty = 0
-            let price = 0
-            cart_items.map((item) => {
-                if(item.category === cat.name){
-                    price = price + item.price
-                    qty = qty + 1
-                }
-            })
-            if(qty > 0){
-                subtotal = subtotal + price
-                items.push({
-                    category: cat.name,
-                    quantity: qty,
-                    price: price,
-                })
-            }
+        await cart_items.map((item) => {
+            const vat_ = (item.price * item.vat)/100
+            const covidVat_ = (item.price * item.covidVat)/100
+
+            vat = vat + vat_
+            covidVat = covidVat + covidVat_
+
+            subtotal = subtotal + item.price
+
         })
 
+        // const total = subtotal + covidVat + vat
+        const total = subtotal
+        subtotal = total - (covidVat + vat)
+
         return {
-                data: {
+            data: {
                 _id: cart._id,
                 uid: cart.uid,
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
-                currency: cart_items[0]?.currency || 'N/A',
+                total: total || 0,
+                vat: vat || 0,
+                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                covidVat: covidVat || 0,
+                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                currency: cart_items[0]?.currency || 'GHS',
                 items: items,
                 payment_type: cart.payment_type
             }
@@ -628,6 +963,14 @@ export class SalesService {
             {$set: {security_handler: user._id, security_clearance: true }}
         )
 
+        await this.notificationService.addNotification({
+            title: 'Security Approval',
+            description: `${cart.uid} was approved by ${user.firstName} ${user.lastName} in ${cart.warehouse}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.WAREHOUSE
+        })
+
         return {
             message: "Successful"
         }
@@ -641,6 +984,7 @@ export class SalesService {
         const carts = await this.cartModel.find({
             handler: user._id,
             confirmed: false,
+            closed: {'$ne': true},
             warehouse: warehouse
         })
 
@@ -842,13 +1186,19 @@ export class SalesService {
         }
 
         const currency = cart_items[0]?.currency
-        let subtotal = 0
+        let total = 0
 
-        await cart_items.map((val) => {
-            subtotal = subtotal + val.price
-        })
+        if(location === "WAREHOUSE"){
+            await cart_items.map((val) => {
+                total = total + val.price
+            })
+        }else{
+            const summary = await this.getDockyardCheckoutSummary(cart.uid)
+            console.log(summary)
+            total = summary.data.total
+        }
 
-        const pay = await this.paystackLink(subtotal, currency, email)
+        const pay = await this.paystackLink(total, currency, email)
 
         const transExist = await this.transactionModel.findOne({
             'cart.id': cart._id
@@ -858,9 +1208,10 @@ export class SalesService {
             handler: user._id,
             reference: pay.reference,
             currency: currency,
-            amount: subtotal,
+            amount: total,
             status: "PENDING",
             customer_contact_info: email,
+            customer_name: payload.customer_name || "N/A",
             payment_type: "ONLINE",
             cart: {
                 id: cart._id,
@@ -928,7 +1279,21 @@ export class SalesService {
             )
         }
 
-        const summary = await this.getCheckoutSummary(cart.uid)
+        let summary
+
+        if(cart.sale_location === "WAREHOUSE"){
+            summary = await this.getCheckoutSummary(cart.uid)
+        }else{
+            summary = await this.getDockyardCheckoutSummary(cart.uid)
+        }
+
+        await this.notificationService.addNotification({
+            title: `${cart.sale_location} Sale`,
+            description: `ONLINE payment of ${summary.data.currency}${summary.data.total} for ${cart.uid}`,
+            warehouse: [cart.warehouse],
+            role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+            tag: NotificationTag.PAYMENT
+        })
 
         return {
             reference: data.reference,
@@ -949,7 +1314,7 @@ export class SalesService {
         )
     }
 
-    async generateWareReceipt(id: ObjectId){
+    async generateWareReceipt(id: ObjectId, type: string){
         const carts = await this.cartModel.findById(id)
 
         if(!carts){
@@ -958,6 +1323,11 @@ export class SalesService {
 
         const summary = await this.getCheckoutSummary(carts.uid)
         const handler = await this.userModel.findOne({_id: carts.handler})
+        const transaction = await this.transactionModel.findOne({
+            payment_type: summary.data.payment_type,
+            status: "COMPLETED",
+            "cart.uid": summary.data.uid
+        })
 
         let options = { format: 'A5' };
 
@@ -972,17 +1342,23 @@ export class SalesService {
         let file = await { content: `
             <html lang="en">
                 ${receiptHeader()}
-                ${receiptBody(summary.data, handler, carts, "Warehouse", barcode)}
+                ${receiptBody(summary.data, handler, carts, "Warehouse", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'), transaction)}
             </html>
         `};
 
         const output = await generatePdf(file, options)
 
-        return output
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+
+            return base64_output
+        }
 
     }
 
-    async generateDockReceipt(id: ObjectId){
+    async generateDockReceipt(id: ObjectId, type: string){
         const carts = await this.dockyardcartModel.findById(id)
 
         if(!carts){
@@ -991,6 +1367,12 @@ export class SalesService {
 
         const summary = await this.getDockyardCheckoutSummary(carts.uid)
         const handler = await this.userModel.findOne({_id: carts.handler})
+        const transaction = await this.transactionModel.findOne({
+            payment_type: summary.data.payment_type,
+            status: "COMPLETED",
+            "cart.uid": summary.data.uid
+        })
+        .sort({createdAt: -1})
 
         let options = { format: 'A5' };
 
@@ -1005,15 +1387,19 @@ export class SalesService {
         let file = await { content: `
             <html lang="en">
                 ${receiptHeader()}
-                ${receiptBody(summary.data, handler, carts, "Dockyard", barcode)}
+                ${receiptBody(summary.data, handler, carts, "Dockyard", barcode, moment(new Date(carts.createdAt)).format('MMM Do YYYY, h:mm a'), transaction)}
             </html>
         `};
 
         const output = await generatePdf(file, options)
 
-        const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
+        if(type === "file"){
+            return output
+        }else{
+            const base64_output = `data:application/pdf;base64,${output.toString('base64')}`
 
-        return base64_output
+            return base64_output
+        }
 
     }
 }

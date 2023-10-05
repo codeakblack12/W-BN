@@ -16,4 +16,31 @@ export class MailService {
             }
         })
     }
+
+    async sendPasswordResetEmail(email: string, name: string, link: string){
+        await this.mailerService.sendMail({
+            to: email,
+            subject: "Reset Wusuaa Password",
+            template: "./resetpassword",
+            context: {
+                name: name,
+                link: link
+            }
+        })
+    }
+
+    async sendDailyReportEmail(email: Array<string>, date: string, file: string){
+        await this.mailerService.sendMail({
+            to: email,
+            subject: `Daily Report - ${date}`,
+            template: "./dailyreport",
+            context: {},
+            attachments: [
+                {   // data uri as an attachment
+                    filename: 'report.pdf',
+                    content: file
+                },
+            ]
+        })
+    }
 }

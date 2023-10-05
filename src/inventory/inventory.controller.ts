@@ -14,9 +14,11 @@ export class InventoryController {
         return this.service.generateCodes(+amt)
     }
 
-    @Get('category')
-    async getCategories(){
-        return this.service.getCategories()
+    @Get('category/:warehouse?')
+    async getCategories(
+        @Param('warehouse') warehouse: string
+    ){
+        return this.service.getCategories(warehouse)
     }
 
     // @UseGuards(InventoryGuard)
@@ -39,6 +41,12 @@ export class InventoryController {
     @Delete('remove/:id')
     async removeFromInventory(@Request() req, @Param('id') id: string){
         return this.service.addOrRemove(id, "minus", req.user)
+    }
+
+    // @UseGuards(InventoryGuard)
+    @Delete('remove-all-in-stock/:id')
+    async removeManyInStock(@Request() req, @Param('id') id: string){
+        return this.service.removeManyInStock(id)
     }
 
 }

@@ -19,7 +19,7 @@ import { UserSchema } from 'src/auth/schemas/auth.schema';
         },
       },
       defaults: {
-        from: '"No Reply" <hobbloo.ng@gmail.com>',
+        from: '"Wusuaa" <hobbloo.ng@gmail.com>',
       },
       template: {
         dir: join(__dirname, 'templates'),

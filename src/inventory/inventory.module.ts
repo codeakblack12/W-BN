@@ -7,6 +7,8 @@ import { CategorySchema } from './schemas/inventory.schema';
 import { InventoryGateway } from './inventory.gateway';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from 'src/auth/auth.module';
+import { WarehouseSchema } from 'src/auth/schemas/auth.schema';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -15,8 +17,10 @@ import { AuthModule } from 'src/auth/auth.module';
       isGlobal: true,
     }),
     AuthModule,
+    NotificationModule,
     MongooseModule.forFeature([{name: 'Category', schema: CategorySchema}]),
     MongooseModule.forFeature([{name: 'Inventory', schema: InventorySchema}]),
+    MongooseModule.forFeature([{name: 'Warehouse', schema: WarehouseSchema}]),
   ],
   controllers: [InventoryController],
   providers: [InventoryService, InventoryGateway],

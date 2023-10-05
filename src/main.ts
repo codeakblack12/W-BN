@@ -3,6 +3,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { RedisIoAdapter } from './redis';
 import { WildcardsIoAdapter } from './components/common/adapters/auth.adapter';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -26,7 +27,13 @@ async function bootstrap() {
   // })
   app.enableCors({origin: "*"})
   // app.useWebSocketAdapter(new WildcardsIoAdapter(app));
-
+  app.useGlobalPipes(
+    new ValidationPipe({
+      // transform: true,
+      // whitelist: true,
+      // forbidUnknownValues: true
+    })
+  );
   await app.listen(3000);
 }
 bootstrap();

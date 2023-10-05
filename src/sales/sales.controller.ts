@@ -3,7 +3,7 @@ import { SalesService } from './sales.service';
 import { SalesGuard } from './sales.guard';
 import { ObjectId } from 'mongoose';
 import { SalesGateway } from './sales.gateway';
-import { CheckoutDockyardCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto } from './dto/post.dto';
+import { AddItemsToDockyardCartDto, CheckoutDockyardCartDto, CloseCartDto, MomoPaymentDto, ObjectIdDto, PaystackLinkDto, ReceiptDto } from './dto/post.dto';
 
 @Controller('sales')
 export class SalesController {
@@ -76,6 +76,36 @@ export class SalesController {
         }
     }
 
+    // Close Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('cart/close')
+    async closeCart(@Request() req, @Body(new ValidationPipe()) payload: CloseCartDto){
+        try {
+            const resp = await this.service.closeCart(req.user, payload)
+            // await this.salesGateway.server.emit(req.user._id, resp.cart)
+            await this.salesGateway.server.emit(`CLOSE-CART-${resp.warehouse}`, resp.cart);
+            return resp
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
+    // Close Dockyard Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('dockyard-cart/close')
+    async closeDockyardCart(@Request() req, @Body(new ValidationPipe()) payload: CloseCartDto){
+        try {
+            const resp = await this.service.closeDockyardCart(req.user, payload)
+            // await this.salesGateway.server.emit(req.user._id, resp.cart)
+            await this.salesGateway.server.emit(`CLOSE-DOCKCART-${resp.warehouse}`, resp.cart);
+            return resp
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
     // Get Dockyard Carts
     @UseGuards(SalesGuard)
     @Get('dockyard-carts/:warehouse')
@@ -95,6 +125,18 @@ export class SalesController {
         }
     }
 
+    // Get Dockyard Cart Items
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('dockyard-cart-items/:_id')
+    async getDockyardCartItems(@Request() req, @Param() params: {_id: string}){
+        try {
+            return this.service.getDockyardCartItems(params._id)
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
+    }
+
     // Checkout Dockyard Cart
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
@@ -104,6 +146,30 @@ export class SalesController {
             return this.service.checkoutDockyardCart(req.user, payload)
         } catch (error) {
             throw new BadRequestException(error)
+        }
+    }
+
+    // Add To Dockyard Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('dockyard-cart/add')
+    async addToDockyardCart(@Request() req, @Body(new ValidationPipe()) payload: AddItemsToDockyardCartDto){
+        return this.service.addToDockyardCart(req.user, payload)
+    }
+
+    // Add Multiple To Warehouse Cart
+    @UseGuards(SalesGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Post('warehouse-cart/add-multiple')
+    async addMultipleToCart(@Request() req, @Body(new ValidationPipe()) payload: AddItemsToDockyardCartDto){
+        const response =  await this.service.addMultipleToCart(req.user, payload)
+        // await response.data.map((item) => {
+        //     this.salesGateway.server.emit(payload.cart, item)
+        // })
+        this.salesGateway.server.emit(`CHECKOUT-${payload.cart}`, response.summary)
+
+        return {
+            message: "Successful"
         }
     }
 
@@ -152,7 +218,7 @@ export class SalesController {
         }
     }
 
-    // Momo Webhook
+    // Paystack Webhook
     @Post('payment/paystack-webhook')
     async paystackWebhook(@Body(new ValidationPipe()) payload: any){
         try {
@@ -169,12 +235,17 @@ export class SalesController {
     // Generate Warehouse Receipt
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
-    @Get('generate-warehouse-receipt/:_id')
-    async generateWareReceipt(@Request() req, @Param() params: ObjectIdDto){
+    @Get('generate-warehouse-receipt/:_id/:type?')
+    async generateWareReceipt(@Request() req, @Param() params: ReceiptDto){
         try {
-            const file = await this.service.generateWareReceipt(params._id)
-            // return new StreamableFile(file)
-            return file
+            const file = await this.service.generateWareReceipt(params._id, params.type)
+
+            if(params.type === "file"){
+                return new StreamableFile(file)
+            }else{
+                return file
+            }
+
         } catch (error) {
             throw new BadRequestException(error)
         }
@@ -183,10 +254,18 @@ export class SalesController {
     // Generate Dockyard Receipt
     @UseGuards(SalesGuard)
     @UsePipes(new ValidationPipe({ transform: true }))
-    @Get('generate-dockyard-receipt/:_id')
-    async generateDockReceipt(@Request() req, @Param() params: ObjectIdDto){
-        const file = await this.service.generateDockReceipt(params._id)
-        return file
+    @Get('generate-dockyard-receipt/:_id/:type?')
+    async generateDockReceipt(@Request() req, @Param() params: ReceiptDto){
+        try {
+            const file = await this.service.generateDockReceipt(params._id, params.type)
+            if(params.type === "file"){
+                return new StreamableFile(file)
+            }else{
+                return file
+            }
+        } catch (error) {
+            throw new BadRequestException(error)
+        }
     }
 
 }

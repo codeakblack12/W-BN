@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, ValidateNested } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, ValidateNested, Max } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { Prop } from "@nestjs/mongoose";
 import { Type } from "class-transformer";
@@ -43,5 +43,17 @@ export class CreateCategoryDto {
     @IsNotEmpty()
     @Min(1)
     stockThreshold: number
+
+    @ApiProperty()
+    @Prop()
+    @Min(0)
+    @Max(100)
+    vat: number
+
+    @ApiProperty()
+    @Prop()
+    @Min(0)
+    @Max(100)
+    covidVat: number
 
 }

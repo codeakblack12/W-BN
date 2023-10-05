@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { InjectModel } from '@nestjs/mongoose';
 import { Category, Inventory } from './schemas/inventory.schema';
 import * as mongoose from 'mongoose';
-import { User } from 'src/auth/schemas/auth.schema';
+import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { CreateCategoryDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { WsException } from '@nestjs/websockets';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationTag } from 'src/notification/schemas/notification.schema';
 
 @Injectable()
 export class InventoryService {
@@ -15,6 +17,10 @@ export class InventoryService {
         private categoryModel: mongoose.Model<Category>,
         @InjectModel(Inventory.name)
         private inventoryModel: mongoose.Model<Inventory>,
+        @InjectModel(Warehouse.name)
+        private warehouseModel: mongoose.Model<Warehouse>,
+
+        private notificationService: NotificationService,
     ) {}
 
     async createCategory(payload: CreateCategoryDto){
@@ -45,9 +51,18 @@ export class InventoryService {
         }
     }
 
-    async getCategories(){
+    async getCategories(warehouse: string){
 
-        const categories = await this.categoryModel.find()
+        const this_warehouse = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
+        const categories = await this.categoryModel.find(
+            {
+                price: {"$elemMatch": {currency: this_warehouse?.currency || "GHS"}}
+            },
+            {'price.$': 1, name: 1, code: 1}
+        )
 
         return {
             data: categories
@@ -78,26 +93,24 @@ export class InventoryService {
                 throw new WsException("Invalid item!");
             }
 
+
             payload = {
                 uid: id,
                 creator: user._id,
                 code: item_arr[0],
                 ref: item_arr[1],
                 category: categories.name,
+                ghost: false
             }
 
             // ADD TO INVENTORY
             const res = await this.inventoryModel.create({
-                uid: id,
-                creator: user._id,
-                code: item_arr[0],
-                ref: item_arr[1],
-                category: categories.name,
+                ...payload,
                 warehouse: warehouse,
                 inStock: true
             })
 
-            return res
+            return {...res.toJSON(), creator_firstname: user.firstName, creator_lastname: user.lastName}
 
         }else{
             // CHECK IF ITEM SCANNED BEFORE
@@ -113,6 +126,24 @@ export class InventoryService {
             }
         }
 
+    }
+
+    async removeManyInStock(id: string){
+
+        const category = await this.categoryModel.findById(id)
+
+        if(!category){
+            throw new BadRequestException("Category does not exist")
+        }
+
+        await this.inventoryModel.deleteMany({
+            category: category.name,
+            inStock: true
+        })
+
+        return {
+            message: "Successful"
+        }
     }
 
 }

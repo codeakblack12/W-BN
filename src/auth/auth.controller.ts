@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, NotFoundException, Post, ValidationPipe, Get } from '@nestjs/common';
-import { CreateWarehouseDto, LoginUserDto, RegisterUserDto } from './dto/post.dto';
+import { BadRequestException, Body, Controller, NotFoundException, Post, ValidationPipe, Get, UseGuards, Request } from '@nestjs/common';
+import { ConfirmResetPasswordDto, CreateWarehouseDto, LoginUserDto, RegisterUserDto, ResetPasswordDto } from './dto/post.dto';
 import { AuthService } from './auth.service';
 import { User, Warehouse } from './schemas/auth.schema';
+import { AdminGuard } from 'src/admin/admin.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -20,7 +21,8 @@ export class AuthController {
         return this.service.getAllWarehouses()
     }
 
-    // Register User
+    // Create Warehouse
+    @UseGuards(AdminGuard)
     @Post('warehouse/create')
     createWarehouse(@Body(new ValidationPipe()) payload: CreateWarehouseDto ) {
         try {
@@ -31,10 +33,11 @@ export class AuthController {
     }
 
     // Register User
+    @UseGuards(AdminGuard)
     @Post('register')
-    registerUser(@Body(new ValidationPipe()) payload: RegisterUserDto ) {
+    registerUser(@Request() req, @Body(new ValidationPipe()) payload: RegisterUserDto ) {
         try {
-            return this.service.registerUser(payload)
+            return this.service.registerUser(payload, req.user)
         } catch (error) {
             throw new BadRequestException();
         }
@@ -46,6 +49,28 @@ export class AuthController {
         try {
             // console.log(payload)
             return this.service.loginUser(payload)
+        } catch (error) {
+            throw new NotFoundException();
+        }
+    }
+
+    // Reset Password
+    @Post('reset-password')
+    resetPassword(@Body(new ValidationPipe()) payload: ResetPasswordDto) {
+        try {
+            // console.log(payload)
+            return this.service.resetPassword(payload)
+        } catch (error) {
+            throw new NotFoundException();
+        }
+    }
+
+    // Confirm Password Reset
+    @Post('confirm-reset')
+    confirmResetPassword(@Body(new ValidationPipe()) payload: ConfirmResetPasswordDto) {
+        try {
+            // console.log(payload)
+            return this.service.confirmResetPassword(payload)
         } catch (error) {
             throw new NotFoundException();
         }

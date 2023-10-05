@@ -1,7 +1,7 @@
 import { IsEmail, IsEnum, IsNotEmpty, MinLength, IsArray, IsString, NotContains, Min, IsMongoId, IsOptional } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 import { ObjectId } from "mongoose";
-import { PAY_METHODS, SALE_LOCATIONS } from "../schemas/sales.schema";
+import { DockItem, PAY_METHODS, SALE_LOCATIONS } from "../schemas/sales.schema";
 import { Currency } from "src/inventory/dto/post.dto";
 
 export class ObjectIdDto {
@@ -10,6 +10,17 @@ export class ObjectIdDto {
     @IsMongoId()
     _id: ObjectId
 
+}
+
+export class ReceiptDto {
+
+    @ApiProperty()
+    @IsMongoId()
+    _id: ObjectId
+
+    @ApiProperty()
+    @IsOptional()
+    type: string
 }
 
 
@@ -21,6 +32,18 @@ export class CreateCartDto {
 
     @ApiProperty()
     warehouse: string
+
+    @ApiProperty()
+    @IsOptional()
+    customer_name: string
+
+}
+
+export class CloseCartDto {
+
+    @ApiProperty()
+    @NotContains(" ")
+    cart: string;
 
 }
 
@@ -53,6 +76,9 @@ export class CheckoutDockyardCartDto {
     @IsOptional()
     email: string
 
+    @IsOptional()
+    customer_name: string
+
 }
 
 export class MomoPaymentDto {
@@ -83,6 +109,10 @@ export class PaystackLinkDto {
     email: string;
 
     @ApiProperty()
+    @IsOptional()
+    customer_name: string;
+
+    @ApiProperty()
     @NotContains(" ")
     @IsEnum(SALE_LOCATIONS, { each: true, message: "Invalid Location" })
     location: SALE_LOCATIONS;
@@ -95,11 +125,19 @@ export class AddToDockyardCartDto {
     cart: string;
 
     @ApiProperty()
-    @NotContains(" ")
-    item: string;
+    @IsNotEmpty()
+    item: DockItem[];
 
+}
+
+
+export class AddItemsToDockyardCartDto {
     @ApiProperty()
     @NotContains(" ")
-    category: string;
+    cart: string;
+
+    @ApiProperty()
+    @IsNotEmpty()
+    items: DockItem[];
 
 }

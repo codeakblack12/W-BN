@@ -1,25 +1,17 @@
 import { Controller, Delete, Get, Param, Post, Request, ValidationPipe, BadRequestException, Body, UseGuards, Query, UsePipes, Put, StreamableFile } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { CreateCartDto } from 'src/sales/dto/post.dto';
+import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, GenerateBarcodeDto, GetInventoryDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
-import { ObjectId } from 'mongoose';
+import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { ObjectId, Types } from 'mongoose';
+import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
 @Controller('admin')
 export class AdminController {
     constructor(private readonly service: AdminService) {}
 
-    // @UseGuards(AdminGuard)
-    @Get('generate-codes')
-    async generateBarcodes(@Query() query: GenerateBarcodeDto){
-        try {
-            const file = await this.service.generateBarcodes(query)
-            return new StreamableFile(file)
-        } catch (error) {
-            throw new BadRequestException();
-        }
-    }
+    // POST CONTROLLERS
 
     @UseGuards(AdminGuard)
     @Post('category/create')
@@ -42,6 +34,22 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
+    @Post('inventory/add')
+    async addToInventory(
+        @Request() req,
+        @Body(new ValidationPipe()) payload: AddInventoryDto
+    ){
+        try {
+            return this.service.addToInventory(req.user, payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+
+    // GET CONTROLLERS
+
+    @UseGuards(AdminGuard)
     @Get('countries')
     async getCountries(){
         try {
@@ -51,13 +59,24 @@ export class AdminController {
         }
     }
 
+    // @UseGuards(AdminGuard)
+    @Get('generate-codes')
+    async generateBarcodes(@Query(new ValidationPipe()) query: GenerateBarcodeDto){
+        try {
+            const file = await this.service.generateBarcodes(query)
+            return new StreamableFile(file)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
     @UseGuards(AdminGuard)
     @Get('transactions')
-    async getTransactions(@Query() query: GetTransactionDto){
+    async getTransactions(@Query(new ValidationPipe()) query: GetTransactionDto){
         try {
             return this.service.getTransactions(
                 query.page, query.limit, query.ref, query.status,
-                query.location, query.warehouse
+                query.location, query.warehouse, query.from, query.to
             )
         } catch (error) {
             throw new BadRequestException();
@@ -66,7 +85,7 @@ export class AdminController {
 
     @UseGuards(AdminGuard)
     @Get('inventory')
-    async getInventory(@Query() query: GetInventoryDto){
+    async getInventory(@Query(new ValidationPipe()) query: GetInventoryDto){
         try {
             return this.service.getInventory(query)
         } catch (error) {
@@ -76,8 +95,9 @@ export class AdminController {
 
     @UseGuards(AdminGuard)
     @Get('inventory/:category')
-    async getInventoryByCategory(@Query() query: GetInventoryDto, @Param('category') category: string){
+    async getInventoryByCategory(@Query(new ValidationPipe()) query: GetInventoryDto, @Param('category') category: string){
         try {
+            console.log(query)
             return this.service.getInventoryByCategory(category, query)
         } catch (error) {
             throw new BadRequestException();
@@ -86,7 +106,7 @@ export class AdminController {
 
     @UseGuards(AdminGuard)
     @Get('users')
-    async getUsers(@Query() query: GetUsersDto){
+    async getUsers(@Query(new ValidationPipe()) query: GetUsersDto){
         try {
             return this.service.getUsers(query)
         } catch (error) {
@@ -95,8 +115,18 @@ export class AdminController {
     }
 
     @UseGuards(AdminGuard)
+    @Get('notifications')
+    async getNotifications(@Request() req, @Query(new ValidationPipe()) query: GetNotificationsDto){
+        try {
+            return this.service.getNotifiications(req.user, query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
     @Get('warehouses')
-    async getWarehouses(@Query() query: GetWarehouseDto){
+    async getWarehouses(@Query(new ValidationPipe()) query: GetWarehouseDto){
         try {
             return this.service.getWarehouses(query)
         } catch (error) {
@@ -129,6 +159,29 @@ export class AdminController {
 
     @UseGuards(AdminGuard)
     // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('inventory-report')
+    async getInventoryReport(@Query(new ValidationPipe()) query: GetInventoryReportDto){
+        try {
+            return this.service.getInventoryReport(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
+    @Get('sales-report')
+    async getSalesReport(@Query(new ValidationPipe()) query: GetSalesReportDto){
+        try {
+            return this.service.getSalesReport(query)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    // @UsePipes(new ValidationPipe({ transform: true }))
     @Get('inventory-overview')
     async getInventoryOverview(@Query(new ValidationPipe()) query: GetStatisticsDto){
         try {
@@ -137,6 +190,19 @@ export class AdminController {
             throw new BadRequestException();
         }
     }
+
+    // @UseGuards(AdminGuard)
+    @Get('daily-report')
+    async getDailyReport(){
+        try {
+            return this.service.handleDailyReport()
+        } catch (error) {
+            throw new BadRequestException(error);
+        }
+    }
+
+
+    // PUT CONTROLLERS
 
     @UseGuards(AdminGuard)
     @Put("activate-warehouse")
@@ -158,5 +224,81 @@ export class AdminController {
         }
     }
 
+    @UseGuards(AdminGuard)
+    @Put("category/:_id")
+    async categoryUpdate(
+        @Param(new ValidationPipe()) params: ObjectIdDto,
+        @Body(new ValidationPipe({whitelist: true})) payload: CreateCategoryDto
+    ){
+        try {
+            return this.service.updateCategory(params._id, payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("warehouse/:_id")
+    async warehouseUpdate(
+        @Param(new ValidationPipe()) params: ObjectIdDto,
+        @Body(new ValidationPipe({whitelist: true})) payload: CreateWarehouseDto
+    ){
+        try {
+            return this.service.updateWarehouse(params._id, payload)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    @UseGuards(AdminGuard)
+    @Put("user/:_id")
+    async userUpdate(
+        @Request() req,
+        @Param(new ValidationPipe()) params: ObjectIdDto,
+        @Body(new ValidationPipe({whitelist: true})) payload: RegisterUserDto
+    ){
+        try {
+            return this.service.updateUser(params._id, payload, req.user)
+        } catch (error) {
+            throw new BadRequestException();
+        }
+    }
+
+    // DELETE CONTROLLERS
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('category/:_id')
+    async deleteCategory(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
+        return this.service.deleteCategory(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('inventory/:_id')
+    async deleteInventory(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
+        return this.service.deleteInventory(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('warehouse/:_id')
+    async deleteWarehouse(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
+        return this.service.deleteWarehouse(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('user/:_id')
+    async deleteUser(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
+        return this.service.deleteUser(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('transaction/:_id')
+    async deleteTransaction(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
+        return this.service.deleteTransaction(params._id)
+    }
 
 }
