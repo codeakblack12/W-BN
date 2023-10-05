@@ -700,7 +700,7 @@ export class SalesService {
                     firstName: handler.firstName,
                     lastName: handler.lastName
                 },
-                customer_name: transaction.customer_name || "N/A",
+                customer_name: transaction?.customer_name || "N/A",
                 confirmed: cart.confirmed,
                 createdAt: cart.createdAt,
                 subtotal: subtotal || 0,
