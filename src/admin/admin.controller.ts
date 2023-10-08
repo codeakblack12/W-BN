@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { CreateCartDto, ObjectIdDto } from 'src/sales/dto/post.dto';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AdminGuard } from './admin.guard';
-import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, DeleteMultipleInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto, ToggleWarehouseDto } from './dto/post.dto';
 import { ObjectId, Types } from 'mongoose';
 import { CreateWarehouseDto, RegisterUserDto } from 'src/auth/dto/post.dto';
 
@@ -278,6 +278,13 @@ export class AdminController {
     @Delete('inventory/:_id')
     async deleteInventory(@Request() req, @Param(new ValidationPipe()) params: ObjectIdDto){
         return this.service.deleteInventory(params._id)
+    }
+
+    @UseGuards(AdminGuard)
+    @UsePipes(new ValidationPipe({ transform: true }))
+    @Delete('multiple-inventory')
+    async deleteMultipleInventory(@Request() req, @Query(new ValidationPipe()) params: DeleteMultipleInventoryDto){
+        return this.service.deleteMultipleInventory(params)
     }
 
     @UseGuards(AdminGuard)

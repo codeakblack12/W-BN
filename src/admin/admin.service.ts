@@ -5,7 +5,7 @@ import { Role, User, Warehouse } from 'src/auth/schemas/auth.schema';
 import { Cart, DockyardCart, Transaction } from 'src/sales/schemas/sales.schema';
 import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
-import { AddCurrencyDto, AddInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
+import { AddCurrencyDto, AddInventoryDto, DeleteMultipleInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
 import { Country } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
@@ -153,6 +153,63 @@ export class AdminService {
         }
     }
 
+    async deleteMultipleInventory(query: DeleteMultipleInventoryDto){
+
+        const { category, number, warehouse } = query
+
+        const cat = await this.categoryModel.findById(category)
+        const warehouses = await this.warehouseModel.findOne({
+            identifier: warehouse
+        })
+
+        if(!cat){
+            throw new BadRequestException("Category does not exist");
+        }
+        if(!warehouses){
+            throw new BadRequestException("Warehouse does not exist");
+        }
+
+        const deletable = await this.inventoryModel.aggregate([
+            {
+                $match: {
+                    ghost: true,
+                    inStock: true,
+                    category: cat.name,
+                    warehouse: warehouses.identifier
+                }
+            },
+            {
+                $project: {
+                    uid: 1,
+                    _id: 0
+                }
+            },
+        ]).limit(Number(number))
+
+        const deletableArr = await deletable.map((val) => {
+            return val.uid
+        })
+
+        await this.inventoryModel.deleteMany({
+            uid: { $in: deletableArr }
+        })
+
+        if(deletableArr.length){
+            await this.notificationService.addNotification({
+                title: 'Stock Deleted',
+                description: `${deletableArr.length} ${cat.name} deleted from ${warehouses.identifier} inventory`,
+                warehouse: [warehouses.identifier],
+                role: [Role.SUPER_ADMIN, Role.ADMIN, Role.MANAGER],
+                tag: NotificationTag.INVENTORY
+            })
+        }
+
+        return {
+            message: `${deletableArr.length} ${cat.name} deleted from inventory`
+        }
+
+    }
+
     async deleteWarehouse(id: ObjectId){
         await this.warehouseModel.deleteOne({
             "_id": id
@@ -257,8 +314,27 @@ export class AdminService {
                     as: "items"
                 },
             },
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "name",
+                    foreignField: "category",
+                    pipeline: [
+                        {   $match: {
+                                inStock: true,
+                                warehouse: {$regex: warehouse},
+                                ghost: true
+                            }
+                        }
+                    ],
+                    as: "ghostitems"
+                },
+            },
             { $addFields: {
                 stock: {$size: "$items"},
+            }},
+            { $addFields: {
+                deletable_stock: {$size: "$ghostitems"},
             }},
             {
                 $project: {
@@ -268,6 +344,7 @@ export class AdminService {
                     createdAt: 1,
                     updatedAt: 1,
                     stock: 1,
+                    deletable_stock: 1,
                     stockThreshold: 1,
                     vat: 1,
                     covidVat: 1,

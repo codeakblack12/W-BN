@@ -249,6 +249,7 @@ export class SalesService {
         const all_categories = await this.categoryModel.find()
 
         let new_items = []
+        let new_items_bulk = []
         let cart_items = []
 
         // const all_items = items.map(async (item) => {
@@ -286,7 +287,8 @@ export class SalesService {
                         foreignField: "items.uid",
                         pipeline: [
                             {   $match: {
-                                    uid: { $ne: cart }
+                                    uid: { $ne: cart },
+                                    closed: false
                                 }
                             }
                         ],
@@ -340,15 +342,33 @@ export class SalesService {
                     category: categoryInfo.name,
                 }
 
-                new_items.push({
-                    ...payload,
-                    creator: user._id,
-                    code: categoryInfo.code,
-                    ref: ref,
-                    warehouse: this_warehouse.identifier,
-                    inStock: true,
-                    ghost: true
-                })
+                // new_items.push({
+                //     ...payload,
+                //     creator: user._id,
+                //     code: categoryInfo.code,
+                //     ref: ref,
+                //     warehouse: this_warehouse.identifier,
+                //     inStock: true,
+                //     ghost: true
+                // })
+                new_items_bulk.push(
+                    {
+                        updateOne: {
+                            filter: { ref: ref },
+                            update: { $set: {
+                                ...payload,
+                                creator: user._id,
+                                code: categoryInfo.code,
+                                ref: ref,
+                                warehouse: this_warehouse.identifier,
+                                inStock: true,
+                                ghost: true
+                            }},
+                            upsert: true
+                        }
+                    }
+                )
+
                 cart_items.push({
                     ...payload,
                     scanned_by: user._id,
@@ -361,14 +381,15 @@ export class SalesService {
 
         // // Add to Inventory
         // await this.inventoryModel.insertMany(new_items)
-        for(var i = 0; i < new_items.length; i++){
-            const itm = new_items[i]
-            await this.inventoryModel.updateOne(
-                {ref: itm.ref},
-                { $set: itm },
-                { upsert: true }
-            )
-        }
+        // for(var i = 0; i < new_items.length; i++){
+        //     const itm = new_items[i]
+        //     await this.inventoryModel.updateOne(
+        //         {ref: itm.ref},
+        //         { $set: itm },
+        //         { upsert: true }
+        //     )
+        // }
+        await this.inventoryModel.bulkWrite(new_items_bulk)
 
         // // Add to Cart
         await this.cartModel.updateOne(
@@ -706,9 +727,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'GHS',
                 items: items,
                 payment_type: cart.payment_type
@@ -810,9 +831,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items
             }
@@ -887,9 +908,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items,
                 payment_type: cart.payment_type
@@ -939,9 +960,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? (vat * 100) / subtotal : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? (covidVat * 100) / subtotal : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'GHS',
                 items: items,
                 payment_type: cart.payment_type

@@ -87,6 +87,19 @@ export class GetInventoryDto {
 
 }
 
+export class DeleteMultipleInventoryDto {
+
+    @ApiProperty()
+    category: ObjectId;
+
+    @ApiProperty()
+    number: number;
+
+    @ApiProperty()
+    warehouse: string;
+
+}
+
 export class GetWarehouseDto {
     @ApiProperty()
     limit: number;
