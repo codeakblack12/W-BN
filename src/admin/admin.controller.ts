@@ -195,7 +195,7 @@ export class AdminController {
     @Get('daily-report')
     async getDailyReport(){
         try {
-            return this.service.handleDailyReport()
+            return this.service.handleDailyReportNew()
         } catch (error) {
             throw new BadRequestException(error);
         }

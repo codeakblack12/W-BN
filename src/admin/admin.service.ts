@@ -17,6 +17,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationService } from 'src/notification/notification.service';
 import { Notification, NotificationTag } from 'src/notification/schemas/notification.schema';
 import { dailyReportBody, dailyReportHead } from 'src/components/common/functions/templates';
+import { DailyReportBottomTable, NewDailyReportHead, DailyReportMainTable } from 'src/components/common/functions/report-template';
 import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
@@ -1180,7 +1181,7 @@ export class AdminService {
 
 
     // CRON JOBS
-    @Cron(CronExpression.EVERY_DAY_AT_10PM)
+    // @Cron(CronExpression.EVERY_DAY_AT_10PM)
     async handleDailyReport() {
         var today_start = new Date();
         today_start.setHours(0,0,0,0);
@@ -1376,7 +1377,287 @@ export class AdminService {
             format: 'A4'
         })
 
-        await this.mailService.sendDailyReportEmail(super_admin_emails, moment(new Date()).format('MMMM Do YYYY'), output)
+        await this.mailService.sendDailyReportEmail(
+            // super_admin_emails,
+            ["igbinedionpaul@gmail.com"],
+            moment(new Date()).format('MMMM Do YYYY'),
+            output
+        )
+
+        return {
+            message: "Daily report sent successfully",
+            super_admins: super_admin_emails,
+            warehouses: processed_warehouses
+        }
+    }
+
+    @Cron(CronExpression.EVERY_DAY_AT_10PM)
+    async handleDailyReportNew() {
+        var today_start = new Date();
+        today_start.setHours(0,0,0,0);
+
+        var today_end = new Date();
+        today_end.setHours(23,59,59,999);
+
+        const aggregate = [
+            // New Users
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "users"
+                },
+            },
+            // Recently Updated users
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$lt: today_start},
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "updatedusers"
+                },
+            },
+
+            // Inventories added
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                createdAt: {$gte: today_start, $lt: today_end},
+                            }
+                        }
+                    ],
+                    as: "stocks"
+                },
+            },
+
+            // Total Inventories
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                inStock: true
+                            }
+                        }
+                    ],
+                    as: "totalstocks"
+                },
+            },
+
+            // Total Inventories Sold Today
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                                inStock: false
+                            }
+                        }
+                    ],
+                    as: "stocksoldtoday"
+                },
+            },
+
+            // Warehouse Carts
+            {
+                $lookup: {
+                    from: "carts",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                                confirmed: true
+                            }
+                        }
+                    ],
+                    as: "warehousecarts"
+                },
+            },
+
+            // Dockyard Carts
+            {
+                $lookup: {
+                    from: "dockyardcarts",
+                    localField: "identifier",
+                    foreignField: "warehouse",
+                    pipeline: [
+                        {   $match: {
+                                updatedAt: {$gte: today_start, $lt: today_end},
+                                confirmed: true
+                            }
+                        }
+                    ],
+                    as: "dockyardcarts"
+                },
+            },
+
+            // Add Fields
+            { $addFields: {
+                newUsers: {$size: "$users"},
+            }},
+            { $addFields: {
+                updatedUsers: {$size: "$updatedusers"},
+            }},
+            { $addFields: {
+                newStock: {$size: "$stocks"},
+            }},
+
+            // Remove Unnecessary Fields
+            {
+                $project: {
+                    users: 0,
+                    // stocks: 0,
+                    updatedusers: 0
+                }
+            },
+        ]
+
+        const warehouses = await this.warehouseModel.aggregate(aggregate)
+        const all_categories = await this.categoryModel.find()
+        const super_admins = await this.userModel.find({
+            role: Role.SUPER_ADMIN
+        })
+
+        const super_admin_emails = await super_admins.map((ad) => {
+            return ad.email
+        })
+
+        const processed_warehouses = await warehouses.map((warehouse) => {
+            let total_warehouse_sales = 0
+            let total_dockyard_sales = 0
+
+            const category_info = all_categories.map((category) => {
+
+                let total_dock_sale_quantity = 0
+                let total_dock_sale = 0
+
+                let total_ware_sale = 0
+
+                const total_available_stock = warehouse.totalstocks.filter((val) => {
+                    if(val.category === category.name){
+                        return val
+                    }
+                })
+
+                const total_added = warehouse.stocks.filter((val) => {
+                    if(val.category === category.name){
+                        return val
+                    }
+                })
+
+                const total_sold = warehouse.stocksoldtoday.filter((val) => {
+                    if(val.category === category.name && !val.inStock){
+                        return val
+                    }
+                })
+
+                warehouse.dockyardcarts.filter((val) => {
+                    val.items.map((itm) => {
+                        if(itm.category === category.name){
+                            total_dock_sale_quantity = total_dock_sale_quantity + itm.quantity
+                            total_dock_sale = total_dock_sale + (itm.price * itm.quantity)
+                        }
+                    })
+                })
+
+                warehouse.warehousecarts.filter((val) => {
+                    val.items.map((itm) => {
+                        if(itm.category === category.name){
+                            total_ware_sale = total_ware_sale + itm.price
+                        }
+                    })
+                })
+
+                total_warehouse_sales = total_warehouse_sales + total_ware_sale
+                total_dockyard_sales = total_dockyard_sales + total_dock_sale
+
+                return {
+                    category: category.name,
+                    added: total_added.length,
+                    sold: total_sold.length,
+                    total_stock: total_available_stock.length,
+                    dock_sold: total_dock_sale_quantity,
+                    dock_total: total_dock_sale,
+                    ware_total: total_ware_sale
+                }
+
+            })
+
+            return {
+                name: warehouse.identifier,
+                currency: warehouse.currency,
+                newUsers: warehouse.newUsers,
+                updatedUsers: warehouse.updatedUsers,
+                addedStock: warehouse.newStock,
+
+                total_warehouse_sales,
+                total_dockyard_sales,
+
+                // stock: stock_info,
+                categoryInfo: category_info,
+                // wareTransactions: warehouse.warehousecarts,
+            }
+        })
+
+        let file = await { content: `
+            <html style=" -webkit-print-color-adjust: exact;" lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Report</title>
+                    <link rel="preload" as="style" href="https://fonts.cdnfonts.com/css/satoshi">
+                </head>
+                <body style="padding: 0; margin: 0;">
+                    <div style="font-family: Satoshi, sans-serif; padding: 0; margin: 0;">
+                    </div>
+                </body>
+                ${NewDailyReportHead(moment(new Date()).format('MMMM Do YYYY'))}
+                ${
+                    processed_warehouses.map((warehouse) => {
+                        return `<page class="page">
+                            ${DailyReportMainTable(warehouse)}
+                            ${DailyReportBottomTable(warehouse)}
+                        </page>`
+                    })
+                }
+            </html>
+        `}
+
+        const output = await generatePdf(file, {
+            format: 'Ledger',
+            landscape: true,
+        })
+
+        await this.mailService.sendDailyReportEmail(
+            super_admin_emails,
+            // ["igbinedionpaul@gmail.com"],
+            moment(new Date()).format('MMMM Do YYYY'),
+            output
+        )
 
         return {
             message: "Daily report sent successfully",
