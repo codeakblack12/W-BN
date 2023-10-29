@@ -1724,8 +1724,8 @@ export class AdminService {
         })
 
         await this.mailService.sendDailyReportEmail(
-            // super_admin_emails,
-            ["igbinedionpaul@gmail.com"],
+            super_admin_emails,
+            // ["igbinedionpaul@gmail.com"],
             moment(new Date()).format('MMMM Do YYYY'),
             output
         )
