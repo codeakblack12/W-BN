@@ -727,9 +727,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / total).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / total).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'GHS',
                 items: items,
                 payment_type: cart.payment_type
@@ -831,9 +831,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / total).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / total).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items
             }
@@ -908,9 +908,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / total).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / total).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'N/A',
                 items: items,
                 payment_type: cart.payment_type
@@ -960,9 +960,9 @@ export class SalesService {
                 subtotal: subtotal || 0,
                 total: total || 0,
                 vat: vat || 0,
-                vatValue: vat > 0 ? Number((vat * 100) / subtotal).toFixed(2) : 0,
+                vatValue: vat > 0 ? Number((vat * 100) / total).toFixed(2) : 0,
                 covidVat: covidVat || 0,
-                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / subtotal).toFixed(2) : 0,
+                covidVatValue: covidVat > 0 ? Number((covidVat * 100) / total).toFixed(2) : 0,
                 currency: cart_items[0]?.currency || 'GHS',
                 items: items,
                 payment_type: cart.payment_type

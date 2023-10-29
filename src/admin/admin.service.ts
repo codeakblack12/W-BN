@@ -7,7 +7,7 @@ import { Category, Inventory } from 'src/inventory/schemas/inventory.schema';
 import { CreateCategoryDto } from 'src/inventory/dto/post.dto';
 import { AddCurrencyDto, AddInventoryDto, DeleteMultipleInventoryDto, GenerateBarcodeDto, GetInventoryDto, GetInventoryReportDto, GetNotificationsDto, GetSalesReportDto, GetStatisticsDto, GetTransactionDto, GetTransactionOverviewDto, GetUsersDto, GetWarehouseDto } from './dto/post.dto';
 import { customAlphabet } from 'nanoid';
-import { Country } from './schemas/admin.schema';
+import { Country, DailyReport, InventoryDeleteReport } from './schemas/admin.schema';
 import { getDateRangeArray } from 'src/components/common/functions/common';
 import * as moment from "moment";
 import { BarcodeBody } from 'src/components/common/functions/barcode-templates';
@@ -27,6 +27,10 @@ export class AdminService {
         private userModel: mongoose.Model<User>,
         @InjectModel(Cart.name)
         private cartModel: mongoose.Model<Cart>,
+        @InjectModel(InventoryDeleteReport.name)
+        private inventoryDeleteReportModel: mongoose.Model<InventoryDeleteReport>,
+        @InjectModel(DailyReport.name)
+        private dailyReportModel: mongoose.Model<DailyReport>,
         @InjectModel(DockyardCart.name)
         private dockyardcartModel: mongoose.Model<DockyardCart>,
         @InjectModel(Inventory.name)
@@ -145,9 +149,28 @@ export class AdminService {
     }
 
     async deleteInventory(id: ObjectId){
+
+        const invntry = await this.inventoryModel.findById(id)
+
+        if(!invntry){
+            throw new BadRequestException("Item does not exist.");
+        }
+
         await this.inventoryModel.deleteOne({
             "_id": id
         })
+
+        await this.inventoryDeleteReportModel.updateOne(
+            {
+                date: new Date().toLocaleDateString(),
+                category: invntry.category,
+                warehouse: invntry.warehouse
+            },
+            {
+                $inc: { deletes: 1 }
+            },
+            { upsert: true }
+        )
 
         return {
             message: "Successful"
@@ -194,6 +217,18 @@ export class AdminService {
         await this.inventoryModel.deleteMany({
             uid: { $in: deletableArr }
         })
+
+        await this.inventoryDeleteReportModel.updateOne(
+            {
+                date: new Date().toLocaleDateString(),
+                category: cat.name,
+                warehouse: warehouses.identifier
+            },
+            {
+                $inc: { deletes: deletableArr.length }
+            },
+            { upsert: true }
+        )
 
         if(deletableArr.length){
             await this.notificationService.addNotification({
@@ -1541,6 +1576,16 @@ export class AdminService {
         const super_admins = await this.userModel.find({
             role: Role.SUPER_ADMIN
         })
+        const all_delete_reports = await this.inventoryDeleteReportModel.find({
+            date: new Date().toLocaleDateString()
+        })
+
+        const yesterday_date = new Date()
+        yesterday_date.setDate(yesterday_date.getDate() - 1)
+
+        const yesterday_report = await this.dailyReportModel.findOne({
+            date: yesterday_date.toLocaleDateString()
+        })
 
         const super_admin_emails = await super_admins.map((ad) => {
             return ad.email
@@ -1550,12 +1595,36 @@ export class AdminService {
             let total_warehouse_sales = 0
             let total_dockyard_sales = 0
 
+            const yesterdayWarehouseReport = yesterday_report?.warehouses?.filter((warehouse_) => {
+                if(warehouse_.name === warehouse.identifier){
+                    return warehouse_
+                }
+            })
+
             const category_info = all_categories.map((category) => {
 
                 let total_dock_sale_quantity = 0
                 let total_dock_sale = 0
 
                 let total_ware_sale = 0
+
+                let yesterday_closing_inventory = "N/A"
+
+                if(yesterdayWarehouseReport?.length){
+                    const categoryReport = yesterdayWarehouseReport[0].categoryInfo
+                    categoryReport.map((cat) => {
+                        if(cat.category === category.name){
+                            yesterday_closing_inventory = cat.total_stock.toString()
+                        }
+                    })
+
+                }
+
+                const deleted_stock = all_delete_reports.filter((val) => {
+                    if(val.category === category.name && val.warehouse === warehouse.identifier){
+                        return val
+                    }
+                })
 
                 const total_available_stock = warehouse.totalstocks.filter((val) => {
                     if(val.category === category.name){
@@ -1602,7 +1671,9 @@ export class AdminService {
                     total_stock: total_available_stock.length,
                     dock_sold: total_dock_sale_quantity,
                     dock_total: total_dock_sale,
-                    ware_total: total_ware_sale
+                    ware_total: total_ware_sale,
+                    deleted_total: deleted_stock.length ? deleted_stock[0].deletes : 0,
+                    yesterday_closing_inventory
                 }
 
             })
@@ -1653,10 +1724,21 @@ export class AdminService {
         })
 
         await this.mailService.sendDailyReportEmail(
-            super_admin_emails,
-            // ["igbinedionpaul@gmail.com"],
+            // super_admin_emails,
+            ["igbinedionpaul@gmail.com"],
             moment(new Date()).format('MMMM Do YYYY'),
             output
+        )
+
+        await this.dailyReportModel.updateOne(
+            {
+                date: new Date().toLocaleDateString()
+            },
+            {
+                sent_to: super_admin_emails,
+                warehouses: processed_warehouses
+            },
+            { upsert: true }
         )
 
         return {

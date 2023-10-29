@@ -8,7 +8,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UserSchema, WarehouseSchema } from 'src/auth/schemas/auth.schema';
 import { CartSchema, DockyardCartSchema, TransactionSchema } from 'src/sales/schemas/sales.schema';
 import { CategorySchema, InventorySchema } from 'src/inventory/schemas/inventory.schema';
-import { CountrySchema } from './schemas/admin.schema';
+import { CountrySchema, DailyReportSchema, InventoryDeleteReportSchema } from './schemas/admin.schema';
 import { NotificationModule } from 'src/notification/notification.module';
 import { NotificationSchema } from 'src/notification/schemas/notification.schema';
 import { MailModule } from 'src/mail/mail.module';
@@ -25,6 +25,8 @@ import { MailModule } from 'src/mail/mail.module';
     NotificationModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
     MongooseModule.forFeature([{name: 'Cart', schema: CartSchema}]),
+    MongooseModule.forFeature([{name: 'DailyReport', schema: DailyReportSchema}]),
+    MongooseModule.forFeature([{name: 'InventoryDeleteReport', schema: InventoryDeleteReportSchema}]),
     MongooseModule.forFeature([{name: 'DockyardCart', schema: DockyardCartSchema}]),
     MongooseModule.forFeature([{name: 'Category', schema: InventorySchema}]),
     MongooseModule.forFeature([{name: 'Inventory', schema: CategorySchema}]),

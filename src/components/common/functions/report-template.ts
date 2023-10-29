@@ -84,13 +84,13 @@ export function DailyInventoryReport(warehouse){
                                 ${category.category}
                             </th>
                             <th style="font-size: 12px; font-style: normal; border: #DBDBDB solid 1px; font-weight: 500; line-height: normal; color: #333; padding: 16px;">
-                                N/A
+                                ${category.yesterday_closing_inventory}
                             </th>
                             <th style="font-size: 12px; font-style: normal; border: #DBDBDB solid 1px; font-weight: 500; line-height: normal; color: #333; padding: 16px;">
                                 ${category.added}
                             </th>
                             <th style="font-size: 12px; font-style: normal; border: #DBDBDB solid 1px; font-weight: 500; line-height: normal; color: #333; padding: 16px;">
-                                N/A
+                                ${category.deleted_total}
                             </th>
                             <th style="font-size: 12px; font-style: normal; border: #DBDBDB solid 1px; font-weight: 500; line-height: normal; color: #333; padding: 16px;">
                                 ${category.sold}
